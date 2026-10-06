@@ -260,7 +260,12 @@ feature -- Element change
 					+ (l_now - policy.age_limit_ticks (policy.Tier_count - 1)).out + " AND end_ticks < " + l_now.out)
 				enforce_cap
 				commit_now
-				exec ("PRAGMA incremental_vacuum")
+				if cap_deletions > 0 then
+						-- Only the cap shrinks the file. Pages freed by merging are reused by the next
+						-- appends; vacuuming them each pass rewrote pages for nothing (measured 2026-10-06:
+						-- 27.5 MB/h written once merging began, against 6 MB/h before).
+					exec ("PRAGMA incremental_vacuum")
+				end
 				load_span
 			end
 		end
@@ -834,6 +839,7 @@ feature {NONE} -- Frames
 		local
 			l_done: BOOLEAN
 		do
+			cap_deletions := 0
 			from
 			until
 				l_done or not last_error.is_empty or else size_bytes <= policy.size_cap_bytes
@@ -841,8 +847,14 @@ feature {NONE} -- Frames
 				exec ("DELETE FROM frames WHERE id IN (SELECT id FROM frames WHERE pinned = 0 AND end_ticks < "
 					+ latest_ticks.out + " ORDER BY start_ticks LIMIT 25)")
 				l_done := db.modified_count = 0
+				if not l_done then
+					cap_deletions := cap_deletions + db.modified_count
+				end
 			end
 		end
+
+	cap_deletions: INTEGER
+			-- Frames the last `enforce_cap' deleted.
 
 invariant
 	pending_bounded: pending >= 0 and pending < Commit_every

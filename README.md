@@ -26,6 +26,10 @@ Part of the [Simple Eiffel](https://github.com/simple-eiffel) ecosystem.
 
 A reading the machine cannot supply says why ("not supported: no thermal zone instance"). It is never shown as 0.
 
+## Install
+
+Build the three targets with `ec.sh release`, then compile `installer/simple_taskman.iss` with Inno Setup 6. The setup installs per user (no administrator rights) to `%LOCALAPPDATA%\Programs\simple_taskman`, with Start-menu entries. Silent: `simple_taskman-0.2.0-Setup.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART` (from PowerShell or cmd).
+
 ## Quick Start
 
 ```eiffel

@@ -59,6 +59,20 @@ feature -- Status report
 
 feature -- Element change
 
+	set_tier0_seconds (a_seconds: INTEGER)
+			-- Measurement aid: 1 s frames merge after `a_seconds' instead of an hour.
+		require
+			not_running: not is_running
+			sane: a_seconds >= 10 and a_seconds <= 86_400
+		do
+			tier0_seconds := a_seconds
+		ensure
+			kept: tier0_seconds = a_seconds
+		end
+
+	tier0_seconds: INTEGER
+			-- Age at which 1 s frames merge; 0 for the default hour.
+
 	attach_slot (a_slot: separate TM_FRAME_SLOT)
 			-- Deliver frames to `a_slot'.
 		require
@@ -225,12 +239,18 @@ feature {NONE} -- Implementation
 		local
 			l_lock: TM_SINGLE_WRITER
 			l_store: TM_SQLITE_TRACE_STORE
+			l_policy: TM_RETENTION_POLICY
 			l_retried: BOOLEAN
 		do
 			if not l_retried then
 				create l_lock.make ({TM_SINGLE_WRITER}.Default_name)
 				if l_lock.is_owner then
-					create l_store.make_writer (store_path, create {TM_RETENTION_POLICY}.make_default)
+					if tier0_seconds > 0 then
+						create l_policy.make (tier0_seconds, 86_400, 2_592_000, 250 * 1_048_576, 0.01, 102_400.0, 256 * 1_048_576, 40)
+					else
+						create l_policy.make_default
+					end
+					create l_store.make_writer (store_path, l_policy)
 					if l_store.is_writable then
 						a_taskman.attach_store (l_store).do_nothing
 						writer_lock := l_lock

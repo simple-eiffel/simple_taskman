@@ -30,3 +30,24 @@
   - simple_sql re-raises SQL errors: store now rescues every call (hostile-file tests)
   - ec.sh release drops cairo.dll beside the exe: a GUI started without it waits on an invisible dialog (oracle gotcha)
   - The soak log wrote a line a minute in every session: now only with --soak
+
+## Second soak (2026-10-06 13:47:43 - 15:14:34, stopped early on purpose)
+  summary: 5210 s, frames shown 3420, dropped 0, processes max 421, sample cost avg 10.3 ms (1.0%),
+    own CPU avg 7.8% (machine in normal use: other programs and Claude sessions running)
+  Memory: rose 31 -> 55 MB by 14:20, then flat to the end (55.0-55.4 MB) apart from 65-70 MB peaks
+    during merge passes that came back down: SQLite caches filling, not a leak.
+  Handles 296-301, GDI 21-23, USER 15: flat.
+  Self-budget: under load (up to 421 processes) samples were spaced to 2-4 s at times, as designed (NFR-001).
+  Merging live: 2,301 one-second and 176 ten-second frames at the end.
+  FINDING: writes 6 MB/h before merging, 27.5 MB/h once merging ran (budget 20). Cause: PRAGMA
+    incremental_vacuum after every merge pass rewrote freed pages for nothing.
+  FIX: vacuum only after the size cap deletes frames (freed pages are reused by appends).
+  RE-MEASURED with --tier0-seconds 120 (merging after 2 minutes), 400 s inside the merging phase:
+    13.3 MB/h written, 0 dropped, tick max 20 ms.  -> NFR-004 met.
+  Open: one 5.5 s GUI tick at ~14:34 and one 1 s render at 14:51; cause not logged. Suspect:
+    LookupAccountSidW on the GUI thread when the selection changes (cache names per SID, move off thread).
+
+## Installer
+  installer/simple_taskman.iss -> simple_taskman-0.2.0-Setup.exe (4.7 MB), per user.
+  Silent install 15:35: exit 0; files, Start-menu entries, desktop shortcut present; installed
+  taskman.exe ran 12 s from the install folder (0 dropped, render 15.6 ms).

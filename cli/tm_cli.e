@@ -27,7 +27,7 @@ feature {NONE} -- Initialization
 			l_cli: SIMPLE_CLI
 		do
 			create l_cli.make
-			l_cli.set_app_info ("taskman_cli", "Diagnostic task manager, headless", "0.1.0")
+			l_cli.set_app_info ("taskman_cli", "Diagnostic task manager, headless", "0.2.0")
 			l_cli.add_option_with_default ("t|top", "Busiest processes to list (1-500)", "N", "10")
 			l_cli.add_option_with_default ("i|interval", "Milliseconds between the two samples (250-60000)", "MS", "1000")
 			l_cli.flag ("s|self", "Also show this tool's own CPU and memory")
@@ -42,7 +42,11 @@ feature {NONE} -- Initialization
 			elseif l_cli.version_requested then
 				io.put_string (l_cli.version_text + "%N")
 			elseif not l_cli.is_successful then
-				fail (l_cli.errors.first)
+				if l_cli.errors.is_empty then
+					fail ("the arguments could not be read")
+				else
+					fail (l_cli.errors.first)
+				end
 			elseif attached l_cli.command as al_command and then al_command.same_string ("snapshot") then
 				run_snapshot (l_cli)
 			elseif attached l_cli.command as al_command and then al_command.same_string ("capabilities") then

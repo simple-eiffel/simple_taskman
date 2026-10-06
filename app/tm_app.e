@@ -40,7 +40,7 @@ feature {NONE} -- Initialization
 			create self.make
 			create soak.make
 			create theme.make_dark
-			create window.make ("simple_taskman", 80, 60, 1280, 820, theme)
+			create window.make ("simple_taskman 0.2.0", 80, 60, 1280, 820, theme)
 			create process_view.make (self.id)
 			create core_view.make (machine_topology)
 			create cpu_tile.make ("CPU")
@@ -131,6 +131,9 @@ feature {NONE} -- Frame source
 		do
 			if replay_path.is_empty then
 				create l_worker.make (Interval_ms, store_path)
+				if tier0_seconds > 0 then
+					set_worker_tier0 (l_worker, tier0_seconds)
+				end
 				attach_worker (l_worker, a_slot)
 				launch_worker (l_worker)
 				if soak_seconds > 0 then
@@ -606,6 +609,13 @@ feature {NONE} -- Separate calls: one short call each
 			a_worker.attach_slot (a_slot)
 		end
 
+	set_worker_tier0 (a_worker: separate TM_SAMPLING_WORKER; a_seconds: INTEGER)
+		require
+			sane: a_seconds >= 10 and a_seconds <= 86_400
+		do
+			a_worker.set_tier0_seconds (a_seconds)
+		end
+
 	launch_worker (a_worker: separate TM_SAMPLING_WORKER)
 			-- Asynchronous: returns at once.
 		do
@@ -674,6 +684,8 @@ feature {NONE} -- Arguments
 					i := i + 1
 				elseif argument (i).same_string ({STRING_32} "--no-record") then
 					no_record := True
+				elseif argument (i).same_string ({STRING_32} "--tier0-seconds") and i < argument_count and then argument (i + 1).is_integer then
+					tier0_seconds := argument (i + 1).to_integer.max (10).min (86_400)
 				elseif argument (i).same_string ({STRING_32} "--select") and i < argument_count and then argument (i + 1).is_integer_64 then
 					select_pid := argument (i + 1).to_integer_64
 				elseif argument (i).same_string ({STRING_32} "--history") and i < argument_count and then argument (i + 1).is_integer then
@@ -743,6 +755,9 @@ feature {NONE} -- Implementation
 
 	no_record: BOOLEAN
 			-- `--no-record': sample without recording.
+
+	tier0_seconds: INTEGER
+			-- `--tier0-seconds N' (measurement aid): 1 s frames merge after N seconds; 0 for an hour.
 
 	select_pid: INTEGER_64
 			-- `--select PID': select that process once it is listed; 0 for none.

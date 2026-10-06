@@ -1,6 +1,10 @@
 # Changelog
 
-## [0.1.0] - unreleased (in development)
+## [0.2.0] - 2026-10-06 (development build, with installer)
+
+Per-user installer (`installer/simple_taskman.iss`): taskman.exe, taskman_cli.exe, taskman_stress.exe, cairo.dll.
+
+## [0.1.0] - 2026-10-05 (development, not released)
 
 ### Added
 - Measurement library (P1): native process table with a layout self-check and a documented fallback; PDH counters for CPU, cores, utility, disks, hard faults, and package power; CPU topology across processor groups; memory and free-space gauges.
@@ -16,7 +20,7 @@
 - Process details, app windows and Not responding, and the actions End task, End process, End tree, priority, and efficiency mode (with Undo), all by process identity; protected and critical processes refused.
 
 ### Measured
-- Recorder: 6.3 MB written an hour (the first design wrote 50); 1.6 KB a frame.
+- Recorder: 6.3 MB written an hour while frames only accumulate, 13.3 MB an hour once merging runs (budget 20). The first design wrote 50, then 27.5 while merging; vacuuming after every merge pass was the churn. 1.6 KB a frame.
 - Window: 4.9% of one CPU and 31 MB, against Windows Task Manager's 8.0% and 127 MB on the same PC.
 
 ### Technical

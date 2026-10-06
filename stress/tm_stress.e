@@ -30,7 +30,7 @@ feature {NONE} -- Initialization
 			create l_self.make
 			say ("pid=" + l_self.id.pid.out + " creation=" + l_self.id.creation_ticks.out)
 			create l_cli.make
-			l_cli.set_app_info ("taskman_stress", "Known loads for simple_taskman", "0.1.0")
+			l_cli.set_app_info ("taskman_stress", "Known loads for simple_taskman", "0.2.0")
 			l_cli.add_option_with_default ("t|threads", "Spinning processors (cpu)", "N", "1")
 			l_cli.add_option_with_default ("s|seconds", "How long to hold the load (1-3600)", "S", "30")
 			l_cli.add_option_with_default ("m|mb", "Megabytes (memory, disk)", "M", "512")
@@ -39,8 +39,14 @@ feature {NONE} -- Initialization
 			l_cli.parse
 			if l_cli.help_requested then
 				io.put_string (l_cli.help_text + Usage)
+			elseif l_cli.version_requested then
+				io.put_string (l_cli.version_text + "%N")
 			elseif not l_cli.is_successful then
-				fail (l_cli.errors.first)
+				if l_cli.errors.is_empty then
+					fail ("the arguments could not be read")
+				else
+					fail (l_cli.errors.first)
+				end
 			elseif not (1 <= seconds (l_cli) and seconds (l_cli) <= 3_600) then
 				fail ("--seconds must be 1 to 3600")
 			elseif attached l_cli.command as al_command and then al_command.same_string ("cpu") then
