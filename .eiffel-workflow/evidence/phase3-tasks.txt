@@ -1,0 +1,15 @@
+# Phase 3 Task Evidence
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-05
+
+Tasks created: 20 (Task 0 .. Task 19)
+Dependencies identified: 15 tasks depend on others (graph in tasks.md)
+Coverage: all 41 "-- Phase 4:" markers in src/ map to exactly one task
+New tests to be added during Phase 4: 10 tasks add tests for stubs that had none
+Authorized contract edits in Phase 4: Task 0 only (review issues 12-16)
+Baseline at start of Phase 4: 67 passed, 40 failed (F_code, contracts kept)
+Outside Phase 4, tracked at the end of tasks.md: spike O-2 (incl. QPC during sleep), W-1, W-11, app targets
+Optional review prompt: prompts/phase3-task-review.md
+Human approved: yes (Larry, 2026-10-05, "Approve")
+
+# Status: APPROVED

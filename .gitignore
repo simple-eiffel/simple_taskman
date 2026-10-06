@@ -1,0 +1,29 @@
+# Eiffel build output
+EIFGENs/
+*.rc
+*.melted
+
+# Binaries and runtime files (cairo.dll is copied beside taskman.exe at build time)
+*.exe
+*.dll
+*.obj
+*.lib
+*.pdb
+
+# Run-time logs and crash dumps
+sw_session.log
+exception_trace.log
+*.log
+
+# Scratch and replay files
+*.tmf
+*.png
+test_consumer/
+
+# Third-party material kept locally only (video transcript used during research)
+YouTube/
+
+# Editors
+.vscode/
+*.swp
+*~

@@ -1,0 +1,120 @@
+# Phase 4 Implementation Evidence
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-05
+
+## Result
+
+All 20 tasks (0-19) done. src: 42 classes, 7,835 lines; testing: 2,642 lines.
+`grep -rn "Phase 4" src` finds nothing. The library never prints
+(`grep -rnE "^\s*(print|io\.)" src` finds nothing).
+
+## Gate (Task 19), from clean EIFGENs
+
+ec.sh check -config simple_taskman.ecf -target simple_taskman_measure
+  System Recompiled.   (no Error code, no Warning code)  -- intent Q7 layering
+
+ec.sh test -config simple_taskman.ecf -target simple_taskman_tests
+  Degree 6: Examining System
+  Degree 5: Parsing Classes
+  Degree 4: Analyzing Inheritance
+  Degree 3: Checking Types
+  Degree 2: Generating Byte Code
+  Degree -2: Constructing Polymorphic Table
+  Degree -3: Generating Optimized Code
+  System Recompiled.
+  C compilation completed
+  Built: EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe (0s ago)
+  grep for "Error code|Warning code|warning C|error C": no matches
+
+./EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe   (COMPUTERNAME = JACKJACK)
+  Results: 121 passed, 0 failed
+  ALL TESTS PASSED
+  -- acceptance on JACKJACK --
+    PASS: native_table_trusted_here
+    PASS: native_read_lists_idle_and_self
+    PASS: win_capabilities_here
+    PASS: documented_denies_rather_than_zeroes
+
+Progress across the phase: 67/107 (start) -> 92/107 (tasks 0-9) -> 104/110
+(codec) -> 118/118 (Windows tasks) -> 121/121 (replay, logger).
+
+## Contract changes
+
+Task 0 (authorized by the approved task list) amended review issues 12-16
+before the snapshot was taken. Snapshot: phase4-contracts-before.txt (722
+clauses), taken by a script that records every require/ensure/invariant
+clause in full (the skill's keyword grep would miss an edited clause).
+
+phase4-contracts-after.txt: 756 clauses.
+diff: 0 clauses removed or changed; 34 added, all on features that did not
+exist before Phase 4:
+  TM_FRAME_CODEC: bits_text, escaped, first_bad_line, line_problem,
+    reading_with_status, real_of_bits, unescaped
+  TM_FRAME_FILE_REPLAYER: deposit, report_failure
+  TM_FORMAT: one_decimal, rounded_count, scaled
+  TM_WINDOW: coverage_of
+  TM_COUNTER_QUERY: add_english_uncapped (public; same contract shape as add_english)
+  TM_CPU_TOPOLOGY: shape_rows
+  TM_NATIVE_PROCESS_SOURCE: make_with_layout_fault (public creation, for the
+    forced-failure test), read_table, compare
+  TM_WIN_SYSTEM_SOURCE: refuse
+  TM_FRAME_BUILDER: put_self_readings
+One invariant clause written during the PDH rewrite (parallel_lists) was
+removed again before the gate, so no existing class gained an invariant.
+
+Contract changes detected: no (additions on new features only)
+
+## Defects found and fixed during implementation
+
+1. ISE compiles C with -D_WIN32_WINNT=0x0500 and -w: newer structs fail
+   (C2065 PROCESS_MEMORY_COUNTERS_EX), newer functions compile undeclared.
+   Fixed with <external_cflag value="-D_WIN32_WINNT=0x0A00 -DWINVER=0x0A00"/>
+   in the ECF, after a scratch repro showed the later definition wins.
+   Oracle gotcha "ISE C targets Windows 2000".
+2. Lost backslash in four modulo operators (`\` for `\\`) from an edit script;
+   caught by reading the bytes, fixed by character code. Edits to Eiffel bodies
+   then moved to the Edit tool.
+3. Scripted system source stored "not supported" placeholders, which the
+   builder's self readings replaced, failing `system_readings_kept`. Sources
+   now leave not-supported metrics absent (absent reads exactly that); the
+   self.* metrics are never read by a system source.
+4. Test design: a wait loop taking the slot as a separate argument held its
+   lock for 5 s and starved the replayer. Polling moved to the caller.
+   Oracle gotcha "SCOOP: never wait inside a routine that takes the slot".
+5. simple_logger keeps its file handle open (upstream W-7), so the logger
+   test cannot delete its log; it deletes only before starting.
+
+## Implementation notes for later phases
+
+- Self metrics read "not supported" in the capability report, because the
+  system source does not supply them (the frame builder does). The window's
+  capability panel should list only hardware metrics.
+- Window aggregates cap measured seconds and coverage at the span: frame
+  spans follow wall time, durations follow the monotonic clock.
+- Sampling with a manual clock that has not advanced violates the builder's
+  `ordered` precondition by design; live clocks always advance.
+
+# Status: PASS
+
+## Addendum (2026-10-05): Windows 10 target guard
+
+Larry approved a compile-time guard in every inline C block that calls an API
+newer than Windows 2000 (9 externals: TM_SYSTEM_CLOCK.c_precise_utc_ticks;
+TM_CPU_TOPOLOGY.c_group_count, c_group_size, c_fill_efficiency_classes;
+TM_COUNTER_QUERY.c_add; TM_WIN_SYSTEM_SOURCE.c_memory;
+TM_DOCUMENTED_PROCESS_SOURCE.c_open, c_memory_info;
+TM_NATIVE_PROCESS_SOURCE.c_self_reads):
+
+    #if _WIN32_WINNT < 0x0A00
+    #error "simple_taskman needs _WIN32_WINNT >= 0x0A00: keep the external_cflag of simple_taskman.ecf"
+    #endif
+
+Verified both ways, from clean EIFGENs:
+  with the ECF flag:    System Recompiled; Built; Results: 121 passed, 0 failed
+  without it (scratch ECF compiling src/model and src/probe directly):
+    F_code\C1\tm14.c(22): fatal error C1189: #error:  "simple_taskman needs
+    _WIN32_WINNT >= 0x0A00: keep the external_cflag of simple_taskman.ecf"
+    (no executable produced)
+Also verified: a separate client ECF using simple_taskman as a library
+inherits the flag (its Makefiles carry 0x0A00 after ISE's 0x0500) and runs
+correctly ("client sees 32 processors; native trusted: True").

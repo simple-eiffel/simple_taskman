@@ -1,0 +1,26 @@
+# Phase 0 Intent Evidence
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-04 08:15:59
+
+Intent document: .eiffel-workflow/intent-v2.md (initial: intent.md)
+Pre-populated from: spec/01-PARSED-REQUIREMENTS.md, spec/03-CHALLENGED-ASSUMPTIONS.md, spec/07-SPECIFICATION.md
+Review conducted: yes
+Review engine: Claude Opus 5.5 (self-review); questions written into intent-v2.md with recommended answers
+Questions generated: 11 (Q1..Q11)
+Questions answered: 11 (all recommended answers accepted)
+Dependency audit: complete (read-only survey of D:\prod with file:line citations)
+  findings that changed the plan:
+    - SIMPLE_LOGGER.make prints to the console (simple_logger.e:522-526); GUI must use make_to_file
+    - SIMPLE_FILE writes byte by byte, no flush, 32-bit offsets, no cache bypass; dropped from stress target
+    - no single-instance (named mutex) helper and no app-data folder helper in simple_*
+    - SIMPLE_SQL_DATABASE.make_read_only opens SQLITE_OPEN_READONLY; busy timeout only via PRAGMA
+    - no simple_* wraps process enumeration, PDH, process control, or elevation (gap confirmed)
+Gaps documented: 8 (intent-v2.md, Gaps Identified); upstream items W-7..W-10 added
+Spec refinements applied after approval: R-1..R-8 (spec/09-ADDENDUM-INTENT.md; edits to 04, 05, 06, 07, 08)
+Class tally after refinements: 65 library P1-P3, 11 library P4 (inventory), 15 application
+MML decision: YES-Required
+User approved: yes (AskUserQuestion answer: "Approve as written (Recommended)")
+
+Not done in this phase: no Eiffel written or compiled (Phase 1 Contracts is next).
+
+# Status: APPROVED

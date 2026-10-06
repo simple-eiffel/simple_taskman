@@ -1,0 +1,756 @@
+simple_taskman.e|make|ensure|nothing_sampled: not has_frame
+simple_taskman.e|make|ensure|source_known: process_source_kind.same_string ("native") or process_source_kind.same_string ("documented")
+simple_taskman.e|make|ensure|native_only_when_trusted: process_source_kind.same_string ("native") implies native_self_check_passed
+simple_taskman.e|make|ensure|fallback_says_why: process_source_kind.same_string ("documented") implies not fallback_reason.is_empty
+simple_taskman.e|make|ensure|self_known: attached self_id as al_self and then al_self.pid > 0
+simple_taskman.e|make|ensure|open: not is_closed
+simple_taskman.e|make_with_sources|require|trusted: a_processes.is_trusted
+simple_taskman.e|make_with_sources|require|open_sources: not a_processes.is_closed and not a_system.is_closed
+simple_taskman.e|make_with_sources|ensure|nothing_sampled: not has_frame
+simple_taskman.e|make_with_sources|ensure|sources_kept: process_source = a_processes and system_source = a_system and clock = a_clock
+simple_taskman.e|make_with_sources|ensure|kind_kept: process_source_kind.same_string (a_processes.kind_name)
+simple_taskman.e|make_with_sources|ensure|no_self: self_id = Void
+simple_taskman.e|make_with_sources|ensure|open: not is_closed
+simple_taskman.e|set_nominal_interval|require|sane: a_ms >= 250 and a_ms <= 60_000
+simple_taskman.e|set_nominal_interval|ensure|kept: nominal_interval_ms = a_ms
+simple_taskman.e|set_nominal_interval|ensure|result_current: Result = Current
+simple_taskman.e|set_self_id|require|not_idle: not a_id.is_idle_pseudo_process
+simple_taskman.e|set_self_id|ensure|kept: self_id = a_id
+simple_taskman.e|set_self_id|ensure|result_current: Result = Current
+simple_taskman.e|set_logger|ensure|kept: logger = a_logger
+simple_taskman.e|set_logger|ensure|result_current: Result = Current
+simple_taskman.e|sample|require|open: not is_closed
+simple_taskman.e|sample|ensure|frame_after_first: old sampler.has_snapshot implies has_frame
+simple_taskman.e|last_frame|require|has_frame: has_frame
+simple_taskman.e|close|ensure|closed: is_closed
+simple_taskman.e|native_kind_is_trusted|invariant|closed_sources_when_closed: is_closed implies (process_source.is_closed and system_source.is_closed)
+simple_taskman.e|native_kind_is_trusted|invariant|native_kind_is_trusted: process_source_kind.same_string ("native") implies native_self_check_passed
+handoff\tm_frame_codec.e|make|ensure|nothing_decoded: not has_frame and not has_capabilities
+handoff\tm_frame_codec.e|encode|ensure|versioned: Result.starts_with (Header)
+handoff\tm_frame_codec.e|encode|ensure|decodable: is_well_formed (Result)
+handoff\tm_frame_codec.e|encode|ensure|every_activity: activity_count_in (Result) = a_frame.activity_count
+handoff\tm_frame_codec.e|encode_capabilities|ensure|versioned: Result.starts_with (Capabilities_header)
+handoff\tm_frame_codec.e|decode|ensure|decoded_or_said_why: has_frame xor not last_error.is_empty
+handoff\tm_frame_codec.e|decode|ensure|round_trip_shape: has_frame implies last_frame.activity_count = activity_count_in (a_text)
+handoff\tm_frame_codec.e|decode|ensure|refused_when_malformed: not is_well_formed (a_text) implies not has_frame
+handoff\tm_frame_codec.e|decode_capabilities|ensure|decoded_or_said_why: has_capabilities xor not last_capabilities_error.is_empty
+handoff\tm_frame_codec.e|decode_capabilities|ensure|frame_error_untouched: last_error ~ old last_error
+handoff\tm_frame_codec.e|frame_texts_in|ensure|each_versioned: across Result as ic all ic.starts_with (Header) end
+handoff\tm_frame_codec.e|last_frame|require|has_frame: has_frame
+handoff\tm_frame_codec.e|last_capabilities|require|has_capabilities: has_capabilities
+handoff\tm_frame_codec.e|is_well_formed|ensure|needs_header: Result implies a_text.starts_with (Header)
+handoff\tm_frame_codec.e|activity_count_in|ensure|non_negative: Result >= 0
+handoff\tm_frame_codec.e|first_bad_line|ensure|non_negative: Result >= 0
+handoff\tm_frame_codec.e|line_problem|ensure|names_the_line: Result.starts_with ({STRING_32} "line ")
+handoff\tm_frame_codec.e|reading_with_status|require|not_available: a_status >= {TM_READING_STATUS}.Unavailable and a_status <= {TM_READING_STATUS}.Invalid
+handoff\tm_frame_codec.e|reading_with_status|ensure|status_kept: Result.status = a_status
+handoff\tm_frame_codec.e|bits_text|ensure|sixteen: Result.count = 16
+handoff\tm_frame_codec.e|real_of_bits|require|hex: is_hex16 (a_field)
+handoff\tm_frame_codec.e|escaped|ensure|no_separators: not Result.has ('%T') and not Result.has ('%N')
+handoff\tm_frame_codec.e|unescaped|require|valid: is_valid_escaped (a_field)
+handoff\tm_frame_file_replayer.e|make|require|path_given: not a_path.is_empty
+handoff\tm_frame_file_replayer.e|make|require|sane_interval: a_interval_ms >= 50 and a_interval_ms <= 60_000
+handoff\tm_frame_file_replayer.e|make|ensure|kept: interval_ms = a_interval_ms
+handoff\tm_frame_file_replayer.e|make|ensure|idle: not is_running and frames_sent = 0
+handoff\tm_frame_file_replayer.e|attach_slot|require|not_running: not is_running
+handoff\tm_frame_file_replayer.e|attach_slot|ensure|attached_slot: slot = a_slot
+handoff\tm_frame_file_replayer.e|run|require|has_slot: attached slot
+handoff\tm_frame_file_replayer.e|run|require|not_running: not is_running
+handoff\tm_frame_file_replayer.e|run|ensure|stopped: not is_running
+handoff\tm_frame_file_replayer.e|run|ensure|slot_told: stop_reported
+handoff\tm_frame_file_replayer.e|deposit|require|given: not a_text.is_empty
+handoff\tm_frame_file_replayer.e|report_failure|require|given: not a_text.is_empty
+handoff\tm_frame_file_replayer.e|sent_non_negative|invariant|sane_interval: interval_ms >= 50 and interval_ms <= 60_000
+handoff\tm_frame_file_replayer.e|sent_non_negative|invariant|sent_non_negative: frames_sent >= 0
+handoff\tm_frame_slot.e|make|ensure|empty: not has_frame and not has_capabilities and not has_failure and not has_stopped
+handoff\tm_frame_slot.e|make|ensure|counted_zero: deposited = 0 and dropped = 0
+handoff\tm_frame_slot.e|make|ensure|running: not stop_requested
+handoff\tm_frame_slot.e|put_frame|require|given: not a_text.is_empty
+handoff\tm_frame_slot.e|put_frame|ensure|ready: has_frame
+handoff\tm_frame_slot.e|put_frame|ensure|counted: deposited = old deposited + 1
+handoff\tm_frame_slot.e|put_frame|ensure|dropped_if_unread: old has_frame implies dropped = old dropped + 1
+handoff\tm_frame_slot.e|put_frame|ensure|kept_if_read: not old has_frame implies dropped = old dropped
+handoff\tm_frame_slot.e|put_frame|ensure|copied: frame_text.count = a_text.count
+handoff\tm_frame_slot.e|put_frame|ensure|stop_unchanged: stop_requested = old stop_requested
+handoff\tm_frame_slot.e|put_capabilities|require|given: not a_text.is_empty
+handoff\tm_frame_slot.e|put_capabilities|ensure|ready: has_capabilities
+handoff\tm_frame_slot.e|put_capabilities|ensure|copied: capabilities_text.count = a_text.count
+handoff\tm_frame_slot.e|put_failure|require|given: not a_text.is_empty
+handoff\tm_frame_slot.e|put_failure|ensure|failed: has_failure
+handoff\tm_frame_slot.e|put_failure|ensure|copied: failure_text.count = a_text.count
+handoff\tm_frame_slot.e|put_stopped|ensure|stopped: has_stopped
+handoff\tm_frame_slot.e|put_stopped|ensure|frame_unchanged: has_frame = old has_frame and deposited = old deposited and dropped = old dropped
+handoff\tm_frame_slot.e|clear|ensure|taken: not has_frame
+handoff\tm_frame_slot.e|clear|ensure|counts_kept: deposited = old deposited and dropped = old dropped
+handoff\tm_frame_slot.e|request_stop|ensure|requested: stop_requested
+handoff\tm_frame_slot.e|request_stop|ensure|frame_unchanged: has_frame = old has_frame and deposited = old deposited and dropped = old dropped
+handoff\tm_frame_slot.e|dropped_bounded|invariant|counts_non_negative: deposited >= 0 and dropped >= 0
+handoff\tm_frame_slot.e|dropped_bounded|invariant|dropped_bounded: dropped <= deposited
+handoff\tm_sampling_worker.e|make|require|sane_interval: a_interval_ms >= 250 and a_interval_ms <= 60_000
+handoff\tm_sampling_worker.e|make|ensure|kept: interval_ms = a_interval_ms
+handoff\tm_sampling_worker.e|make|ensure|idle: not is_running
+handoff\tm_sampling_worker.e|make|ensure|no_slot: not attached slot
+handoff\tm_sampling_worker.e|attach_slot|require|not_running: not is_running
+handoff\tm_sampling_worker.e|attach_slot|ensure|attached_slot: slot = a_slot
+handoff\tm_sampling_worker.e|run|require|has_slot: attached slot
+handoff\tm_sampling_worker.e|run|require|not_running: not is_running
+handoff\tm_sampling_worker.e|run|ensure|stopped: not is_running
+handoff\tm_sampling_worker.e|run|ensure|slot_told: stop_reported
+handoff\tm_sampling_worker.e|deposit|require|given: not a_text.is_empty
+handoff\tm_sampling_worker.e|deposit_capabilities|require|given: not a_text.is_empty
+handoff\tm_sampling_worker.e|started_taskman|ensure|reason_when_failed: Result = Void implies not last_failure.is_empty
+handoff\tm_sampling_worker.e|started_taskman|ensure|capabilities_when_started: Result /= Void implies not start_capabilities_text.is_empty
+handoff\tm_sampling_worker.e|pause_ms|ensure|floor: Result >= Minimum_pause_ms
+handoff\tm_sampling_worker.e|exception_text|ensure|not_empty: not Result.is_empty
+handoff\tm_sampling_worker.e|failures_non_negative|invariant|sane_interval: interval_ms >= 250 and interval_ms <= Maximum_interval_ms
+handoff\tm_sampling_worker.e|failures_non_negative|invariant|failures_non_negative: failures >= 0
+model\tm_aggregate.e|make|require|known_kind: a_kind = Weighted_mean or a_kind = Peak
+model\tm_aggregate.e|make|require|coverage_bounded: a_coverage >= 0.0 and a_coverage <= 1.0
+model\tm_aggregate.e|make|require|seconds_non_negative: a_measured_seconds >= 0.0
+model\tm_aggregate.e|make|require|unavailable_when_unmeasured: a_coverage = 0.0 implies not a_reading.is_available
+model\tm_aggregate.e|make|ensure|kept: kind = a_kind and reading = a_reading and coverage = a_coverage and measured_seconds = a_measured_seconds
+model\tm_aggregate.e|coverage_bounded|invariant|known_kind: kind = Weighted_mean or kind = Peak
+model\tm_aggregate.e|seconds_non_negative|invariant|coverage_bounded: coverage >= 0.0 and coverage <= 1.0
+model\tm_aggregate.e|unavailable_when_unmeasured|invariant|seconds_non_negative: measured_seconds >= 0.0
+model\tm_aggregate.e|unavailable_when_unmeasured|invariant|unavailable_when_unmeasured: coverage = 0.0 implies not reading.is_available
+model\tm_clock.e|utc_ticks|ensure|after_1601: Result > 0
+model\tm_clock.e|monotonic_ticks|ensure|non_negative: Result >= 0
+model\tm_clock.e|sleep_ms|require|non_negative: a_ms >= 0
+model\tm_format.e|reading_text|ensure|words_when_missing: not a_reading.is_available implies Result.same_string_general (a_reading.status_name)
+model\tm_format.e|reading_text|ensure|number_when_available: a_reading.is_available implies Result.same_string (value_text (a_reading.value, a_metric.unit))
+model\tm_format.e|value_text|require|finite: not (a_value.is_nan or a_value.is_positive_infinity or a_value.is_negative_infinity)
+model\tm_format.e|value_text|require|unit_given: not a_unit.is_empty
+model\tm_format.e|value_text|ensure|not_empty: not Result.is_empty
+model\tm_format.e|value_text|ensure|ends_with_unit: Result.ends_with (a_unit.to_string_32)
+model\tm_format.e|cores|require|non_negative: a_cores >= 0.0
+model\tm_format.e|cores|ensure|not_empty: not Result.is_empty
+model\tm_format.e|percent|require|non_negative: a_percent >= 0.0
+model\tm_format.e|percent|ensure|not_empty: not Result.is_empty
+model\tm_format.e|percent|ensure|percent_sign: Result.ends_with ({STRING_32} "%%")
+model\tm_format.e|bytes|require|non_negative: a_bytes >= 0
+model\tm_format.e|bytes|ensure|not_empty: not Result.is_empty
+model\tm_format.e|bytes|ensure|ends_in_b: Result.ends_with ({STRING_32} "B")
+model\tm_format.e|bytes_per_second|require|non_negative: a_rate >= 0.0
+model\tm_format.e|bytes_per_second|ensure|not_empty: not Result.is_empty
+model\tm_format.e|bytes_per_second|ensure|per_second: Result.ends_with ({STRING_32} "/s")
+model\tm_format.e|one_decimal|require|finite: not (a_value.is_nan or a_value.is_positive_infinity or a_value.is_negative_infinity)
+model\tm_format.e|one_decimal|ensure|one_decimal_place: Result.count >= 3 and then Result [Result.count - 1] = '.'
+model\tm_format.e|status_word|require|not_available: a_status >= {TM_READING_STATUS}.Unavailable and a_status <= {TM_READING_STATUS}.Invalid
+model\tm_format.e|status_word|ensure|not_empty: not Result.is_empty
+model\tm_format.e|status_word|ensure|not_a_number: not Result.is_integer and not Result.is_double
+model\tm_format.e|rounded_count|require|finite: not (a_value.is_nan or a_value.is_positive_infinity or a_value.is_negative_infinity)
+model\tm_format.e|rounded_count|ensure|non_negative: Result >= 0
+model\tm_format.e|scaled|require|at_least_a_kilobyte: a_bytes >= 1024.0
+model\tm_format.e|scaled|ensure|ends_in_b: Result.ends_with ({STRING_32} "B")
+model\tm_frame.e|make|require|ordered: a_end > a_start
+model\tm_frame.e|make|require|positive_duration: a_duration > 0
+model\tm_frame.e|make|require|processors: a_logical_processors > 0
+model\tm_frame.e|make|require|no_idle: across a_activities as ic all not ic.id.is_idle_pseudo_process end
+model\tm_frame.e|make|ensure|times_kept: start_ticks = a_start and end_ticks = a_end and duration = a_duration
+model\tm_frame.e|make|ensure|readings_kept: readings = a_readings
+model\tm_frame.e|make|ensure|sealed: readings.is_sealed
+model\tm_frame.e|make|ensure|complete: is_complete and omitted_processes = 0
+model\tm_frame.e|make|ensure|live: not is_discontinuity
+model\tm_frame.e|make|ensure|adjusted_kept: is_clock_adjusted = a_clock_adjusted
+model\tm_frame.e|make|ensure|every_activity: across a_activities as ic all has_activity (ic.id) end
+model\tm_frame.e|make|ensure|born_are_new_activities: across born_list as ic all has_activity (ic) and then activity (ic).is_new end
+model\tm_frame.e|make|ensure|exited_not_active: across exited_list as ic all not has_activity (ic.id) end
+model\tm_frame.e|make_discontinuity|require|ordered: a_end > a_start
+model\tm_frame.e|make_discontinuity|require|positive_duration: a_duration > 0
+model\tm_frame.e|make_discontinuity|require|processors: a_logical_processors > 0
+model\tm_frame.e|make_discontinuity|require|known_metrics: across a_supported as ic all metrics.has_code (ic) end
+model\tm_frame.e|make_discontinuity|ensure|times_kept: start_ticks = a_start and end_ticks = a_end and duration = a_duration
+model\tm_frame.e|make_discontinuity|ensure|flagged: is_discontinuity
+model\tm_frame.e|make_discontinuity|ensure|adjusted_kept: is_clock_adjusted = a_clock_adjusted
+model\tm_frame.e|make_discontinuity|ensure|empty: activity_count = 0 and born_list.is_empty and exited_list.is_empty
+model\tm_frame.e|make_discontinuity|ensure|sealed: readings.is_sealed
+model\tm_frame.e|make_discontinuity|ensure|all_unavailable: across a_supported as ic all not metrics.metric (ic).is_instanced implies readings.reading (ic, {STRING_32} "").is_unavailable end
+model\tm_frame.e|make_decoded|require|ordered: a_end > a_start
+model\tm_frame.e|make_decoded|require|positive_duration: a_duration > 0
+model\tm_frame.e|make_decoded|require|processors: a_logical_processors > 0
+model\tm_frame.e|make_decoded|require|omitted_non_negative: a_omitted >= 0
+model\tm_frame.e|make_decoded|require|no_idle: across a_activities as ic all not ic.id.is_idle_pseudo_process end
+model\tm_frame.e|make_decoded|require|discontinuity_empty: a_is_discontinuity implies not (across a_activities as ic some True end or across a_born as ic some True end)
+model\tm_frame.e|make_decoded|ensure|times_kept: start_ticks = a_start and end_ticks = a_end and duration = a_duration
+model\tm_frame.e|make_decoded|ensure|flags_kept: is_discontinuity = a_is_discontinuity and is_clock_adjusted = a_clock_adjusted and omitted_processes = a_omitted
+model\tm_frame.e|make_decoded|ensure|exited_not_active: across exited_list as ic all not has_activity (ic.id) end
+model\tm_frame.e|make_decoded|ensure|recorded: not is_complete
+model\tm_frame.e|make_decoded|ensure|sealed: readings.is_sealed
+model\tm_frame.e|activity|require|present: has_activity (a_id)
+model\tm_frame.e|activity|ensure|matches: Result.id ~ a_id
+model\tm_frame.e|activities|ensure|fresh_each_call: Result /= activities
+model\tm_frame.e|activities|ensure|complete: Result.count = activity_count
+model\tm_frame.e|self_activity|ensure|present_iff_known: attached Result = has_activity (a_self)
+model\tm_frame.e|top_by|require|known_resource: a_resource >= {TM_RESOURCE}.Cpu and a_resource <= {TM_RESOURCE}.Io_total
+model\tm_frame.e|top_by|require|positive: a_count > 0
+model\tm_frame.e|top_by|ensure|bounded: Result.count <= a_count
+model\tm_frame.e|top_by|ensure|measured_only: across Result as ic all ic.has_resource (a_resource) end
+model\tm_frame.e|top_by|ensure|descending: across 2 |..| Result.count as ic all Result [ic - 1].amount_of (a_resource) >= Result [ic].amount_of (a_resource) end
+model\tm_frame.e|top_by|ensure|as_many_as_possible: Result.count = a_count.min (measured_count (a_resource))
+model\tm_frame.e|born|ensure|fresh: Result /= born_list
+model\tm_frame.e|exited|ensure|fresh: Result /= exited_list
+model\tm_frame.e|measured_count|require|known_resource: a_resource >= {TM_RESOURCE}.Cpu and a_resource <= {TM_RESOURCE}.Io_total
+model\tm_frame.e|measured_count|ensure|bounded: Result >= 0 and Result <= activity_count
+model\tm_frame.e|identities_model|ensure|same_count: Result.count = activity_count
+model\tm_frame.e|positive_duration|invariant|ordered: end_ticks > start_ticks
+model\tm_frame.e|processors|invariant|positive_duration: duration > 0
+model\tm_frame.e|readings_sealed|invariant|processors: logical_processors > 0
+model\tm_frame.e|discontinuity_is_empty|invariant|readings_sealed: readings.is_sealed
+model\tm_frame.e|recorded_subset|invariant|discontinuity_is_empty: is_discontinuity implies (activity_count = 0 and born_list.is_empty)
+model\tm_frame.e|omitted_non_negative|invariant|recorded_subset: is_complete implies omitted_processes = 0
+model\tm_frame.e|omitted_non_negative|invariant|omitted_non_negative: omitted_processes >= 0
+model\tm_manual_clock.e|make|require|utc_positive: a_utc_ticks > 0
+model\tm_manual_clock.e|make|require|monotonic_non_negative: a_monotonic_ticks >= 0
+model\tm_manual_clock.e|make|ensure|utc_kept: utc_ticks = a_utc_ticks
+model\tm_manual_clock.e|make|ensure|monotonic_kept: monotonic_ticks = a_monotonic_ticks
+model\tm_manual_clock.e|advance|require|non_negative: a_ticks >= 0
+model\tm_manual_clock.e|advance|ensure|utc_moved: utc_ticks = old utc_ticks + a_ticks
+model\tm_manual_clock.e|advance|ensure|monotonic_moved: monotonic_ticks = old monotonic_ticks + a_ticks
+model\tm_manual_clock.e|set_utc|require|positive: a_ticks > 0
+model\tm_manual_clock.e|set_utc|ensure|utc_set: utc_ticks = a_ticks
+model\tm_manual_clock.e|set_utc|ensure|monotonic_unchanged: monotonic_ticks = old monotonic_ticks
+model\tm_manual_clock.e|sleep_ms|ensure then|monotonic_moved: monotonic_ticks = old monotonic_ticks + a_ms.to_integer_64 * (Ticks_per_second // 1000)
+model\tm_manual_clock.e|monotonic_non_negative|invariant|utc_positive: current_utc > 0
+model\tm_manual_clock.e|monotonic_non_negative|invariant|monotonic_non_negative: current_monotonic >= 0
+model\tm_metric.e|make|require|code_positive: a_code > 0
+model\tm_metric.e|make|require|name_valid: is_valid_name (a_name)
+model\tm_metric.e|make|require|unit_given: not a_unit.is_empty
+model\tm_metric.e|make|require|label_given: not a_label.is_empty
+model\tm_metric.e|make|require|ordered_range: a_minimum <= a_maximum
+model\tm_metric.e|make|ensure|kept: code = a_code and name.same_string (a_name) and minimum = a_minimum and maximum = a_maximum
+model\tm_metric.e|make|ensure|text_kept: unit.same_string (a_unit) and label.same_string (a_label)
+model\tm_metric.e|make|ensure|flags_kept: is_instanced = a_is_instanced and is_peak = a_is_peak
+model\tm_metric.e|accepts|ensure|definition: Result = (not (a_value.is_nan or a_value.is_positive_infinity or a_value.is_negative_infinity) and then (a_value >= minimum and a_value <= maximum))
+model\tm_metric.e|is_valid_name|ensure|empty_refused: a_name.is_empty implies not Result
+model\tm_metric.e|ordered_range|invariant|code_positive: code > 0
+model\tm_metric.e|unit_given|invariant|ordered_range: minimum <= maximum
+model\tm_metric.e|unit_given|invariant|unit_given: not unit.is_empty
+model\tm_metrics.e|make|ensure|complete: count = Last_code
+model\tm_metrics.e|metric|require|known: has_code (a_code)
+model\tm_metrics.e|metric|ensure|matches: Result.code = a_code
+model\tm_metrics.e|metric_named|require|known: has_name (a_name)
+model\tm_metrics.e|metric_named|ensure|matches: Result.name.same_string (a_name)
+model\tm_metrics.e|all_metrics|ensure|fresh: Result /= all_metrics_storage
+model\tm_metrics.e|all_metrics|ensure|complete: Result.count = count
+model\tm_metrics.e|codes|ensure|complete: Result.count = count
+model\tm_metrics.e|add|require|next_in_order: a_code = all_metrics_storage.count + 1
+model\tm_metrics.e|add|ensure|added: all_metrics_storage.count = old all_metrics_storage.count + 1
+model\tm_metrics.e|codes_dense|invariant|codes_dense: count = Last_code
+model\tm_process_activity.e|make_from_pair|require|same_identity: a_before.id ~ a_after.id
+model\tm_process_activity.e|make_from_pair|require|positive_time: a_seconds > 0.0
+model\tm_process_activity.e|make_from_pair|require|processors: a_logical_processors > 0
+model\tm_process_activity.e|make_from_pair|require|not_idle: not a_after.id.is_idle_pseudo_process
+model\tm_process_activity.e|make_from_pair|ensure|identity_kept: id ~ a_after.id and name.same_string (a_after.name)
+model\tm_process_activity.e|make_from_pair|ensure|not_new: not is_new
+model\tm_process_activity.e|make_from_pair|ensure|cpu_rate_when_valid: (both_cpu (a_before, a_after) and then is_possible_cores (pair_cores (a_before, a_after, a_seconds), a_logical_processors)) implies (cpu_status = {TM_READING_STATUS}.Available and cpu_cores = pair_cores (a_before, a_after, a_seconds))
+model\tm_process_activity.e|make_from_pair|ensure|cpu_invalid_when_impossible: (both_cpu (a_before, a_after) and then not is_possible_cores (pair_cores (a_before, a_after, a_seconds), a_logical_processors)) implies cpu_status = {TM_READING_STATUS}.Invalid
+model\tm_process_activity.e|make_from_pair|ensure|cpu_reason_kept: not both_cpu (a_before, a_after) implies cpu_status = worse_of (a_before.cpu_status, a_after.cpu_status)
+model\tm_process_activity.e|make_from_pair|ensure|io_rate_when_valid: (both_io (a_before, a_after) and then is_possible_bps (a_before, a_after)) implies (io_status = {TM_READING_STATUS}.Available and io_read_bps = (a_after.read_bytes - a_before.read_bytes) / a_seconds and io_write_bps = (a_after.write_bytes - a_before.write_bytes) / a_seconds)
+model\tm_process_activity.e|make_from_pair|ensure|io_invalid_when_backward: (both_io (a_before, a_after) and then not is_possible_bps (a_before, a_after)) implies io_status = {TM_READING_STATUS}.Invalid
+model\tm_process_activity.e|make_from_pair|ensure|io_reason_kept: not both_io (a_before, a_after) implies io_status = worse_of (a_before.io_status, a_after.io_status)
+model\tm_process_activity.e|make_from_pair|ensure|memory_is_gauge: memory_status = a_after.memory_status
+model\tm_process_activity.e|make_born|require|processors: a_logical_processors > 0
+model\tm_process_activity.e|make_born|require|not_idle: not a_after.id.is_idle_pseudo_process
+model\tm_process_activity.e|make_born|ensure|identity_kept: id ~ a_after.id and name.same_string (a_after.name)
+model\tm_process_activity.e|make_born|ensure|new: is_new
+model\tm_process_activity.e|make_born|ensure|no_rates: cpu_status = {TM_READING_STATUS}.Unavailable and io_status = {TM_READING_STATUS}.Unavailable
+model\tm_process_activity.e|make_born|ensure|memory_is_gauge: memory_status = a_after.memory_status
+model\tm_process_activity.e|make_decoded|require|processors: a_logical_processors > 0
+model\tm_process_activity.e|make_decoded|require|not_idle: not a_id.is_idle_pseudo_process
+model\tm_process_activity.e|make_decoded|require|identity_fields_non_negative: a_parent_pid >= 0 and a_session >= 0 and a_threads >= 0 and a_handles >= 0
+model\tm_process_activity.e|make_decoded|require|known_statuses: a_cpu_status >= {TM_READING_STATUS}.Available and a_cpu_status <= {TM_READING_STATUS}.Invalid and a_memory_status >= {TM_READING_STATUS}.Available and a_memory_status <= {TM_READING_STATUS}.Invalid and a_io_status >= {TM_READING_STATUS}.Available and a_io_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_activity.e|make_decoded|ensure|identity_kept: id ~ a_id and name.same_string (a_name)
+model\tm_process_activity.e|make_decoded|ensure|new_kept: is_new = a_is_new
+model\tm_process_activity.e|make_decoded|ensure|cpu_checked: cpu_status = {TM_READING_STATUS}.Available implies (a_cpu_status = {TM_READING_STATUS}.Available and is_possible_cores (a_cores, a_logical_processors) and cpu_cores = a_cores)
+model\tm_process_activity.e|make_decoded|ensure|cpu_refused: (a_cpu_status = {TM_READING_STATUS}.Available and not a_is_new and not is_possible_cores (a_cores, a_logical_processors)) implies cpu_status = {TM_READING_STATUS}.Invalid
+model\tm_process_activity.e|make_decoded|ensure|io_checked: io_status = {TM_READING_STATUS}.Available implies (a_io_status = {TM_READING_STATUS}.Available and a_read_bps >= 0.0 and a_write_bps >= 0.0)
+model\tm_process_activity.e|make_decoded|ensure|newcomer_cpu_refused: (a_is_new and a_cpu_status = {TM_READING_STATUS}.Available) implies cpu_status = {TM_READING_STATUS}.Invalid
+model\tm_process_activity.e|make_decoded|ensure|newcomer_io_refused: (a_is_new and a_io_status = {TM_READING_STATUS}.Available) implies io_status = {TM_READING_STATUS}.Invalid
+model\tm_process_activity.e|make_decoded|ensure|memory_checked: memory_status = {TM_READING_STATUS}.Available implies (a_memory_status = {TM_READING_STATUS}.Available and a_working_set >= 0 and a_private_bytes >= 0)
+model\tm_process_activity.e|cpu_cores|require|cpu_available: cpu_status = {TM_READING_STATUS}.Available
+model\tm_process_activity.e|cpu_cores|ensure|non_negative: Result >= 0.0
+model\tm_process_activity.e|cpu_percent|require|cpu_available: cpu_status = {TM_READING_STATUS}.Available
+model\tm_process_activity.e|cpu_percent|ensure|non_negative: Result >= 0.0
+model\tm_process_activity.e|io_read_bps|require|io_available: io_status = {TM_READING_STATUS}.Available
+model\tm_process_activity.e|io_read_bps|ensure|non_negative: Result >= 0.0
+model\tm_process_activity.e|io_write_bps|require|io_available: io_status = {TM_READING_STATUS}.Available
+model\tm_process_activity.e|io_write_bps|ensure|non_negative: Result >= 0.0
+model\tm_process_activity.e|working_set|require|memory_available: memory_status = {TM_READING_STATUS}.Available
+model\tm_process_activity.e|private_bytes|require|memory_available: memory_status = {TM_READING_STATUS}.Available
+model\tm_process_activity.e|handles|require|memory_available: memory_status = {TM_READING_STATUS}.Available
+model\tm_process_activity.e|amount_of|require|known_resource: a_resource >= {TM_RESOURCE}.Cpu and a_resource <= {TM_RESOURCE}.Io_total
+model\tm_process_activity.e|amount_of|require|measured: has_resource (a_resource)
+model\tm_process_activity.e|amount_of|ensure|non_negative: Result >= 0.0
+model\tm_process_activity.e|has_resource|require|known_resource: a_resource >= {TM_RESOURCE}.Cpu and a_resource <= {TM_RESOURCE}.Io_total
+model\tm_process_activity.e|pair_cores|require|both: both_cpu (a_before, a_after)
+model\tm_process_activity.e|pair_cores|require|positive_time: a_seconds > 0.0
+model\tm_process_activity.e|is_possible_bps|require|both: both_io (a_before, a_after)
+model\tm_process_activity.e|worse_of|ensure|one_of_them: Result = a_first or Result = a_second
+model\tm_process_activity.e|threads_non_negative|invariant|processors: logical_processors > 0
+model\tm_process_activity.e|not_idle|invariant|threads_non_negative: threads >= 0
+model\tm_process_activity.e|cpu_status_known|invariant|not_idle: not id.is_idle_pseudo_process
+model\tm_process_activity.e|memory_status_known|invariant|cpu_status_known: cpu_status >= {TM_READING_STATUS}.Available and cpu_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_activity.e|io_status_known|invariant|memory_status_known: memory_status >= {TM_READING_STATUS}.Available and memory_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_activity.e|born_has_no_rates|invariant|io_status_known: io_status >= {TM_READING_STATUS}.Available and io_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_activity.e|cpu_possible|invariant|born_has_no_rates: is_new implies (cpu_status /= {TM_READING_STATUS}.Available and io_status /= {TM_READING_STATUS}.Available)
+model\tm_process_activity.e|cpu_zero_unless_set|invariant|cpu_possible: cpu_status = {TM_READING_STATUS}.Available implies (stored_cores >= 0.0 and stored_cores <= logical_processors * Cpu_tolerance)
+model\tm_process_activity.e|io_non_negative|invariant|cpu_zero_unless_set: cpu_status /= {TM_READING_STATUS}.Available implies stored_cores = 0.0
+model\tm_process_activity.e|io_zero_unless_set|invariant|io_non_negative: io_status = {TM_READING_STATUS}.Available implies (stored_read_bps >= 0.0 and stored_write_bps >= 0.0)
+model\tm_process_activity.e|memory_zero_unless_set|invariant|io_zero_unless_set: io_status /= {TM_READING_STATUS}.Available implies (stored_read_bps = 0.0 and stored_write_bps = 0.0)
+model\tm_process_activity.e|memory_zero_unless_set|invariant|memory_zero_unless_set: memory_status /= {TM_READING_STATUS}.Available implies (stored_working_set = 0 and stored_private_bytes = 0 and stored_handles = 0)
+model\tm_process_id.e|make|require|pid_non_negative: a_pid >= 0
+model\tm_process_id.e|make|require|creation_non_negative: a_creation_ticks >= 0
+model\tm_process_id.e|make|ensure|kept: pid = a_pid and creation_ticks = a_creation_ticks
+model\tm_process_id.e|is_equal|ensure then|both_fields: Result = (pid = other.pid and creation_ticks = other.creation_ticks)
+model\tm_process_id.e|creation_non_negative|invariant|pid_non_negative: pid >= 0
+model\tm_process_id.e|creation_non_negative|invariant|creation_non_negative: creation_ticks >= 0
+model\tm_process_sample.e|make|require|parent_non_negative: a_parent_pid >= 0
+model\tm_process_sample.e|make|require|session_non_negative: a_session >= 0
+model\tm_process_sample.e|make|require|threads_non_negative: a_threads >= 0
+model\tm_process_sample.e|make|ensure|identity_kept: id ~ a_id
+model\tm_process_sample.e|make|ensure|name_copied: name.same_string (a_name) and name /= a_name
+model\tm_process_sample.e|make|ensure|others_kept: parent_pid = a_parent_pid and session = a_session and threads = a_threads
+model\tm_process_sample.e|make|ensure|groups_unset: cpu_status = {TM_READING_STATUS}.Unavailable and memory_status = {TM_READING_STATUS}.Unavailable and io_status = {TM_READING_STATUS}.Unavailable
+model\tm_process_sample.e|user_ticks|require|cpu_available: cpu_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|kernel_ticks|require|cpu_available: cpu_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|working_set|require|memory_available: memory_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|private_bytes|require|memory_available: memory_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|handles|require|memory_available: memory_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|read_bytes|require|io_available: io_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|write_bytes|require|io_available: io_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|set_cpu|require|not_yet: cpu_status = {TM_READING_STATUS}.Unavailable
+model\tm_process_sample.e|set_cpu|require|non_negative: a_user_ticks >= 0 and a_kernel_ticks >= 0
+model\tm_process_sample.e|set_cpu|ensure|available: cpu_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|set_cpu|ensure|kept: user_ticks = a_user_ticks and kernel_ticks = a_kernel_ticks
+model\tm_process_sample.e|set_cpu|ensure|others_unchanged: memory_status = old memory_status and io_status = old io_status
+model\tm_process_sample.e|deny_cpu|require|not_yet: cpu_status = {TM_READING_STATUS}.Unavailable
+model\tm_process_sample.e|deny_cpu|require|a_reason: a_status >= {TM_READING_STATUS}.Not_supported and a_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_sample.e|deny_cpu|ensure|kept: cpu_status = a_status
+model\tm_process_sample.e|deny_cpu|ensure|others_unchanged: memory_status = old memory_status and io_status = old io_status
+model\tm_process_sample.e|set_memory|require|not_yet: memory_status = {TM_READING_STATUS}.Unavailable
+model\tm_process_sample.e|set_memory|require|non_negative: a_working_set >= 0 and a_private_bytes >= 0 and a_handles >= 0
+model\tm_process_sample.e|set_memory|ensure|available: memory_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|set_memory|ensure|kept: working_set = a_working_set and private_bytes = a_private_bytes and handles = a_handles
+model\tm_process_sample.e|set_memory|ensure|others_unchanged: cpu_status = old cpu_status and io_status = old io_status
+model\tm_process_sample.e|deny_memory|require|not_yet: memory_status = {TM_READING_STATUS}.Unavailable
+model\tm_process_sample.e|deny_memory|require|a_reason: a_status >= {TM_READING_STATUS}.Not_supported and a_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_sample.e|deny_memory|ensure|kept: memory_status = a_status
+model\tm_process_sample.e|deny_memory|ensure|others_unchanged: cpu_status = old cpu_status and io_status = old io_status
+model\tm_process_sample.e|set_io|require|not_yet: io_status = {TM_READING_STATUS}.Unavailable
+model\tm_process_sample.e|set_io|require|non_negative: a_read_bytes >= 0 and a_write_bytes >= 0
+model\tm_process_sample.e|set_io|ensure|available: io_status = {TM_READING_STATUS}.Available
+model\tm_process_sample.e|set_io|ensure|kept: read_bytes = a_read_bytes and write_bytes = a_write_bytes
+model\tm_process_sample.e|set_io|ensure|others_unchanged: cpu_status = old cpu_status and memory_status = old memory_status
+model\tm_process_sample.e|deny_io|require|not_yet: io_status = {TM_READING_STATUS}.Unavailable
+model\tm_process_sample.e|deny_io|require|a_reason: a_status >= {TM_READING_STATUS}.Not_supported and a_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_sample.e|deny_io|ensure|kept: io_status = a_status
+model\tm_process_sample.e|deny_io|ensure|others_unchanged: cpu_status = old cpu_status and memory_status = old memory_status
+model\tm_process_sample.e|threads_non_negative|invariant|parent_non_negative: parent_pid >= 0
+model\tm_process_sample.e|cpu_status_known|invariant|threads_non_negative: threads >= 0
+model\tm_process_sample.e|memory_status_known|invariant|cpu_status_known: cpu_status >= {TM_READING_STATUS}.Available and cpu_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_sample.e|io_status_known|invariant|memory_status_known: memory_status >= {TM_READING_STATUS}.Available and memory_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_sample.e|cpu_zero_unless_set|invariant|io_status_known: io_status >= {TM_READING_STATUS}.Available and io_status <= {TM_READING_STATUS}.Invalid
+model\tm_process_sample.e|io_zero_unless_set|invariant|cpu_zero_unless_set: cpu_status /= {TM_READING_STATUS}.Available implies (stored_user_ticks = 0 and stored_kernel_ticks = 0)
+model\tm_process_sample.e|memory_zero_unless_set|invariant|io_zero_unless_set: io_status /= {TM_READING_STATUS}.Available implies (stored_read_bytes = 0 and stored_write_bytes = 0)
+model\tm_process_sample.e|memory_zero_unless_set|invariant|memory_zero_unless_set: memory_status /= {TM_READING_STATUS}.Available implies (stored_working_set = 0 and stored_private_bytes = 0 and stored_handles = 0)
+model\tm_process_total.e|make|require|known_resource: a_resource >= {TM_RESOURCE}.Cpu and a_resource <= {TM_RESOURCE}.Io_total
+model\tm_process_total.e|make|require|total_non_negative: a_total >= 0.0
+model\tm_process_total.e|make|require|seen: a_frames_seen > 0
+model\tm_process_total.e|make|ensure|kept: id ~ a_id and name.same_string (a_name) and resource = a_resource and total = a_total and frames_seen = a_frames_seen
+model\tm_process_total.e|total_non_negative|invariant|known_resource: resource >= {TM_RESOURCE}.Cpu and resource <= {TM_RESOURCE}.Io_total
+model\tm_process_total.e|seen|invariant|total_non_negative: total >= 0.0
+model\tm_process_total.e|seen|invariant|seen: frames_seen > 0
+model\tm_reading.e|make_measured|ensure|available_when_accepted: a_metric.accepts (a_value) implies (is_available and value = a_value)
+model\tm_reading.e|make_measured|ensure|invalid_otherwise: not a_metric.accepts (a_value) implies is_invalid
+model\tm_reading.e|make_unavailable|ensure|unavailable: is_unavailable
+model\tm_reading.e|make_not_supported|ensure|not_supported: is_not_supported
+model\tm_reading.e|make_access_denied|ensure|denied: is_access_denied
+model\tm_reading.e|make_invalid|ensure|invalid: is_invalid
+model\tm_reading.e|value|require|available: is_available
+model\tm_reading.e|value|ensure|definition: Result = stored_value
+model\tm_reading.e|status_name|ensure|named: not Result.is_empty
+model\tm_reading.e|exactly_one_status|invariant|status_known: status >= {TM_READING_STATUS}.Available and status <= {TM_READING_STATUS}.Invalid
+model\tm_reading.e|value_only_when_available|invariant|exactly_one_status: is_available xor (is_unavailable or is_not_supported or is_access_denied or is_invalid)
+model\tm_reading.e|available_is_finite|invariant|value_only_when_available: not is_available implies stored_value = 0.0
+model\tm_reading.e|available_is_finite|invariant|available_is_finite: is_available implies not (stored_value.is_nan or stored_value.is_positive_infinity or stored_value.is_negative_infinity)
+model\tm_readings.e|make|ensure|empty: count = 0
+model\tm_readings.e|make|ensure|open: not is_sealed
+model\tm_readings.e|make_from|ensure|same_entries: readings_model |=| a_other.readings_model
+model\tm_readings.e|make_from|ensure|open: not is_sealed
+model\tm_readings.e|reading|require|known_metric: metrics.has_code (a_code)
+model\tm_readings.e|reading|require|instance_rule: metrics.metric (a_code).is_instanced = not a_instance.is_empty
+model\tm_readings.e|reading|ensure|stored_if_present: has (a_code, a_instance) implies Result = table.item (key (a_code, a_instance))
+model\tm_readings.e|reading|ensure|not_supported_if_absent: not has (a_code, a_instance) implies Result.is_not_supported
+model\tm_readings.e|instances|require|known_metric: metrics.has_code (a_code)
+model\tm_readings.e|instances|require|instanced: metrics.metric (a_code).is_instanced
+model\tm_readings.e|instances|ensure|each_present: across Result as ic all has (a_code, ic) end
+model\tm_readings.e|put|require|open: not is_sealed
+model\tm_readings.e|put|require|known_metric: metrics.has_code (a_code)
+model\tm_readings.e|put|require|instance_rule: metrics.metric (a_code).is_instanced = not a_instance.is_empty
+model\tm_readings.e|put|require|fits_metric: a_reading.is_available implies metrics.metric (a_code).accepts (a_reading.value)
+model\tm_readings.e|put|ensure|stored: reading (a_code, a_instance) = a_reading
+model\tm_readings.e|put|ensure|added_if_new: not old has (a_code, a_instance) implies count = old count + 1
+model\tm_readings.e|put|ensure|replaced_if_present: old has (a_code, a_instance) implies count = old count
+model\tm_readings.e|put|ensure|others_unchanged: agrees_except (old table.twin, key (a_code, a_instance))
+model\tm_readings.e|seal|ensure|sealed: is_sealed
+model\tm_readings.e|seal|ensure|unchanged: readings_model |=| old readings_model
+model\tm_readings.e|includes|ensure|at_least_as_large: Result implies count >= a_other.count
+model\tm_readings.e|readings_model|ensure|same_count: Result.count = count
+model\tm_readings.e|key|ensure|starts_with_code: Result.starts_with (a_code.out + "|")
+model\tm_readings.e|count_matches_table|invariant|count_matches_table: count = table.count
+model\tm_series.e|make|require|positive: a_capacity > 0
+model\tm_series.e|make|ensure|empty: count = 0
+model\tm_series.e|make|ensure|capacity_kept: capacity = a_capacity
+model\tm_series.e|ticks_at|require|in_range: i >= 1 and i <= count
+model\tm_series.e|status_at|require|in_range: i >= 1 and i <= count
+model\tm_series.e|status_at|ensure|known: Result >= {TM_READING_STATUS}.Available and Result <= {TM_READING_STATUS}.Invalid
+model\tm_series.e|value_at|require|in_range: i >= 1 and i <= count
+model\tm_series.e|value_at|require|available: is_available_at (i)
+model\tm_series.e|last_ticks|require|not_empty: count > 0
+model\tm_series.e|is_available_at|require|in_range: i >= 1 and i <= count
+model\tm_series.e|extend|require|in_order: count > 0 implies a_ticks > last_ticks
+model\tm_series.e|extend|ensure|bounded: count = (old count + 1).min (capacity)
+model\tm_series.e|extend|ensure|newest_ticks: ticks_at (count) = a_ticks
+model\tm_series.e|extend|ensure|newest_status: status_at (count) = a_reading.status
+model\tm_series.e|extend|ensure|newest_value: a_reading.is_available implies value_at (count) = a_reading.value
+model\tm_series.e|extend|ensure|history_kept: old count < capacity implies across 1 |..| (old count) as ic all status_at (ic) = (old statuses_list).i_th (ic) end
+model\tm_series.e|extend|ensure|oldest_dropped: old count = capacity implies across 1 |..| (count - 1) as ic all status_at (ic) = (old statuses_list).i_th (ic + 1) end
+model\tm_series.e|statuses_model|ensure|same_count: Result.count = count
+model\tm_series.e|statuses_list|ensure|same_count: Result.count = count
+model\tm_series.e|physical|require|in_range: i >= 1 and i <= count
+model\tm_series.e|physical|ensure|inside: Result >= 0 and Result < capacity
+model\tm_series.e|non_negative|invariant|positive_capacity: capacity > 0
+model\tm_series.e|bounded|invariant|non_negative: count >= 0
+model\tm_series.e|first_inside|invariant|bounded: count <= capacity
+model\tm_series.e|storage_sized|invariant|first_inside: first >= 0 and first < capacity
+model\tm_series.e|storage_sized|invariant|storage_sized: ticks.count = capacity and values.count = capacity and statuses.count = capacity
+model\tm_shared_metrics.e|metrics|ensure|complete: Result.count = {TM_METRICS}.Last_code
+model\tm_snapshot.e|make|require|utc_positive: a_utc_ticks > 0
+model\tm_snapshot.e|make|require|monotonic_non_negative: a_monotonic_ticks >= 0
+model\tm_snapshot.e|make|require|readings_sealed: a_readings.is_sealed
+model\tm_snapshot.e|make|ensure|times_kept: utc_ticks = a_utc_ticks and monotonic_ticks = a_monotonic_ticks
+model\tm_snapshot.e|make|ensure|readings_kept: readings = a_readings
+model\tm_snapshot.e|make|ensure|every_identity: across a_samples as ic all has (ic.id) end
+model\tm_snapshot.e|sample|require|present: has (a_id)
+model\tm_snapshot.e|sample|ensure|matches: Result.id ~ a_id
+model\tm_snapshot.e|samples|ensure|fresh_each_call: Result /= samples
+model\tm_snapshot.e|samples|ensure|complete: Result.count = count
+model\tm_snapshot.e|identities_model|ensure|same_count: Result.count = count
+model\tm_snapshot.e|monotonic_non_negative|invariant|utc_positive: utc_ticks > 0
+model\tm_snapshot.e|readings_sealed|invariant|monotonic_non_negative: monotonic_ticks >= 0
+model\tm_snapshot.e|readings_sealed|invariant|readings_sealed: readings.is_sealed
+model\tm_window.e|make|ensure|empty: is_empty
+model\tm_window.e|frame|require|in_range: i >= 1 and i <= count
+model\tm_window.e|last_frame|require|not_empty: not is_empty
+model\tm_window.e|aggregate|require|not_empty: not is_empty
+model\tm_window.e|aggregate|require|known_metric: metrics.has_code (a_code)
+model\tm_window.e|aggregate|require|instance_rule: metrics.metric (a_code).is_instanced = not a_instance.is_empty
+model\tm_window.e|aggregate|ensure|coverage_bounded: Result.coverage >= 0.0 and Result.coverage <= 1.0
+model\tm_window.e|aggregate|ensure|unavailable_when_unmeasured: Result.coverage = 0.0 implies not Result.reading.is_available
+model\tm_window.e|aggregate|ensure|peak_rule: metrics.metric (a_code).is_peak implies Result.kind = {TM_AGGREGATE}.Peak
+model\tm_window.e|aggregate|ensure|mean_rule: not metrics.metric (a_code).is_peak implies Result.kind = {TM_AGGREGATE}.Weighted_mean
+model\tm_window.e|aggregate|ensure|seconds_within_span: Result.measured_seconds <= span_seconds + Epsilon
+model\tm_window.e|aggregate|ensure|pure: count = old count and last_frame = old last_frame
+model\tm_window.e|ranked|require|not_empty: not is_empty
+model\tm_window.e|ranked|require|known_resource: a_resource >= {TM_RESOURCE}.Cpu and a_resource <= {TM_RESOURCE}.Io_total
+model\tm_window.e|ranked|require|positive: a_count > 0
+model\tm_window.e|ranked|ensure|bounded: Result.count <= a_count
+model\tm_window.e|ranked|ensure|resource_kept: across Result as ic all ic.resource = a_resource end
+model\tm_window.e|ranked|ensure|descending: across 2 |..| Result.count as ic all Result [ic - 1].total >= Result [ic].total end
+model\tm_window.e|ranked|ensure|pure: count = old count and last_frame = old last_frame
+model\tm_window.e|measured_seconds|ensure|non_negative: Result >= 0.0
+model\tm_window.e|measured_seconds|ensure|within_span: Result <= span_seconds + Epsilon
+model\tm_window.e|span_seconds|ensure|non_negative: Result >= 0.0
+model\tm_window.e|coverage_of|require|not_empty: not is_empty
+model\tm_window.e|coverage_of|require|non_negative: a_measured_ticks >= 0
+model\tm_window.e|coverage_of|ensure|bounded: Result >= 0.0 and Result <= 1.0
+model\tm_window.e|extend|require|in_order: not is_empty implies a_frame.start_ticks >= end_ticks
+model\tm_window.e|extend|ensure|appended: count = old count + 1 and last_frame = a_frame
+model\tm_window.e|extend|ensure|earlier_kept: across 1 |..| (old count) as ic all frame (ic) = (old frame_list.twin).i_th (ic) end
+model\tm_window.e|extend|ensure|new_end: end_ticks = a_frame.end_ticks
+model\tm_window.e|extend|ensure|first_sets_start: old is_empty implies start_ticks = a_frame.start_ticks
+model\tm_window.e|extend|ensure|start_kept: not old is_empty implies start_ticks = old start_ticks
+model\tm_window.e|frames_model|ensure|same_count: Result.count = count
+model\tm_window.e|span_ordered|invariant|empty_has_no_span: is_empty implies (start_ticks = 0 and end_ticks = 0)
+model\tm_window.e|count_matches|invariant|span_ordered: not is_empty implies end_ticks > start_ticks
+model\tm_window.e|count_matches|invariant|count_matches: count = frame_list.count
+probe\tm_counter_query.e|make|ensure|empty: counter_count = 0 and collections = 0
+probe\tm_counter_query.e|make|ensure|open: not is_closed
+probe\tm_counter_query.e|values|require|valid_counter: a_counter >= 1 and a_counter <= counter_count
+probe\tm_counter_query.e|values|require|collected: collections >= 1
+probe\tm_counter_query.e|values|ensure|fresh: Result /= values (a_counter)
+probe\tm_counter_query.e|add_english|require|open: not is_closed
+probe\tm_counter_query.e|add_english|require|path_given: not a_path.is_empty
+probe\tm_counter_query.e|add_english|ensure|added_or_zero: (Result > 0) = (last_status = Pdh_ok)
+probe\tm_counter_query.e|add_english|ensure|counted: Result > 0 implies (counter_count = old counter_count + 1 and Result = counter_count)
+probe\tm_counter_query.e|add_english|ensure|unchanged_on_refusal: Result = 0 implies counter_count = old counter_count
+probe\tm_counter_query.e|add_english_uncapped|require|open: not is_closed
+probe\tm_counter_query.e|add_english_uncapped|require|path_given: not a_path.is_empty
+probe\tm_counter_query.e|add_english_uncapped|ensure|added_or_zero: (Result > 0) = (last_status = Pdh_ok)
+probe\tm_counter_query.e|add_english_uncapped|ensure|counted: Result > 0 implies (counter_count = old counter_count + 1 and Result = counter_count)
+probe\tm_counter_query.e|add_english_uncapped|ensure|unchanged_on_refusal: Result = 0 implies counter_count = old counter_count
+probe\tm_counter_query.e|collect|require|open: not is_closed
+probe\tm_counter_query.e|collect|require|has_counters: counter_count > 0
+probe\tm_counter_query.e|collect|ensure|collected: collections = old collections + 1
+probe\tm_counter_query.e|close|ensure|closed: is_closed
+probe\tm_counter_query.e|close|ensure|handle_released: handle = default_pointer
+probe\tm_counter_query.e|counts_non_negative|invariant|counts_non_negative: counter_count >= 0 and collections >= 0
+probe\tm_counter_value.e|make|ensure|kept: instance.same_string (a_instance) and pdh_status = a_pdh_status
+probe\tm_counter_value.e|value|require|valid: is_valid
+probe\tm_cpu_topology.e|make|ensure|some_processor: logical_processor_count > 0
+probe\tm_cpu_topology.e|make_from_groups|require|some_group: a_group_sizes.count > 0
+probe\tm_cpu_topology.e|make_from_groups|require|groups_bounded: a_group_sizes.count <= Maximum_groups
+probe\tm_cpu_topology.e|make_from_groups|require|sizes_valid: across a_group_sizes as ic all ic > 0 and ic <= Maximum_per_group end
+probe\tm_cpu_topology.e|make_from_groups|require|one_class_each: a_efficiency_classes.count = sum_of (a_group_sizes)
+probe\tm_cpu_topology.e|make_from_groups|require|classes_non_negative: across a_efficiency_classes as ic all ic >= 0 end
+probe\tm_cpu_topology.e|make_from_groups|ensure|counted: logical_processor_count = sum_of (a_group_sizes)
+probe\tm_cpu_topology.e|make_from_groups|ensure|groups_kept: group_count = a_group_sizes.count
+probe\tm_cpu_topology.e|group_size|require|valid_group: a_group >= 0 and a_group < group_count
+probe\tm_cpu_topology.e|efficiency_class|require|valid_index: a_index >= 0 and a_index < logical_processor_count
+probe\tm_cpu_topology.e|flat_index|require|valid_group: a_group >= 0 and a_group < group_count
+probe\tm_cpu_topology.e|flat_index|require|valid_number: a_number >= 0 and a_number < group_size (a_group)
+probe\tm_cpu_topology.e|flat_index|ensure|inside: Result >= 0 and Result < logical_processor_count
+probe\tm_cpu_topology.e|heatmap_columns|ensure|positive: Result > 0
+probe\tm_cpu_topology.e|heatmap_columns|ensure|holds_all: Result * heatmap_rows >= logical_processor_count
+probe\tm_cpu_topology.e|heatmap_columns|ensure|nearly_square: Result >= heatmap_rows
+probe\tm_cpu_topology.e|heatmap_rows|ensure|positive: Result > 0
+probe\tm_cpu_topology.e|heatmap_rows|ensure|no_empty_row: (Result - 1) * heatmap_columns < logical_processor_count
+probe\tm_cpu_topology.e|shape_rows|ensure|positive: Result > 0
+probe\tm_cpu_topology.e|bounded|invariant|some_processor: logical_processor_count > 0
+probe\tm_cpu_topology.e|one_class_each|invariant|bounded: logical_processor_count <= Maximum_groups * Maximum_per_group
+probe\tm_cpu_topology.e|one_class_each|invariant|one_class_each: efficiency_classes.count = logical_processor_count
+probe\tm_documented_process_source.e|make|ensure|open: not is_closed
+probe\tm_documented_process_source.e|make|ensure|trusted: is_trusted
+probe\tm_native_process_source.e|make|ensure|checked: last_self_check.has_run
+probe\tm_native_process_source.e|make|ensure|trusted_only_if_passed: is_trusted = last_self_check.passed
+probe\tm_native_process_source.e|make|ensure|reason_when_untrusted: not is_trusted implies not last_self_check.failure.is_empty
+probe\tm_native_process_source.e|make|ensure|not_64_bit_never_trusted: not {PLATFORM}.is_64_bits implies not is_trusted
+probe\tm_native_process_source.e|make|ensure|located_or_untrusted: query_function = default_pointer implies not is_trusted
+probe\tm_native_process_source.e|make|ensure|open: not is_closed
+probe\tm_native_process_source.e|make_with_layout_fault|ensure|checked: last_self_check.has_run
+probe\tm_native_process_source.e|make_with_layout_fault|ensure|refused: not is_trusted and not last_self_check.failure.is_empty
+probe\tm_native_process_source.e|read_table|ensure|succeeded_or_said_why: last_read_succeeded xor not last_error.is_empty
+probe\tm_native_process_source.e|run_self_check|require|not_decided: not last_self_check.has_run
+probe\tm_native_process_source.e|run_self_check|require|located: query_function /= default_pointer
+probe\tm_native_process_source.e|run_self_check|ensure|decided: last_self_check.has_run
+probe\tm_native_process_source.e|compare|require|not_decided: not last_self_check.has_run
+probe\tm_native_process_source.e|compare|ensure|decided: last_self_check.has_run
+probe\tm_native_process_source.e|trusted_has_function|invariant|buffer_present: buffer.count >= Minimum_buffer_bytes
+probe\tm_native_process_source.e|trusted_only_on_64_bit|invariant|trusted_has_function: is_trusted implies query_function /= default_pointer
+probe\tm_native_process_source.e|trusted_only_on_64_bit|invariant|trusted_only_on_64_bit: is_trusted implies {PLATFORM}.is_64_bits
+probe\tm_paths.e|make|ensure|rooted_or_said_why: has_root xor not missing_reason.is_empty
+probe\tm_paths.e|make_with_base|require|base_given: not a_base.is_empty
+probe\tm_paths.e|make_with_base|ensure|rooted: has_root
+probe\tm_paths.e|make_with_base|ensure|under_base: root.starts_with (a_base)
+probe\tm_paths.e|trace_path|require|rooted: has_root
+probe\tm_paths.e|trace_path|ensure|under_root: Result.starts_with (root)
+probe\tm_paths.e|logs_folder|require|rooted: has_root
+probe\tm_paths.e|logs_folder|ensure|under_root: Result.starts_with (root)
+probe\tm_paths.e|log_path|require|rooted: has_root
+probe\tm_paths.e|log_path|require|target_given: not a_target.is_empty
+probe\tm_paths.e|log_path|require|processor_given: not a_processor.is_empty
+probe\tm_paths.e|log_path|require|plain_names: is_plain_name (a_target) and is_plain_name (a_processor)
+probe\tm_paths.e|log_path|ensure|in_logs: Result.starts_with (logs_folder)
+probe\tm_paths.e|log_path|ensure|is_log: Result.ends_with ({STRING_32} ".log")
+probe\tm_paths.e|rooted_or_said_why|invariant|rooted_or_said_why: has_root xor not missing_reason.is_empty
+probe\tm_process_source.e|read_all|require|trusted: is_trusted
+probe\tm_process_source.e|read_all|require|open: not is_closed
+probe\tm_process_source.e|read_all|ensure|succeeded_or_said_why: last_read_succeeded xor not last_error.is_empty
+probe\tm_process_source.e|read_all|ensure|idle_present_when_native: (last_read_succeeded and is_native) implies has_idle_entry
+probe\tm_process_source.e|read_all|ensure|unique_identities: last_read_succeeded implies has_unique_identities
+probe\tm_process_source.e|close|ensure|closed: is_closed
+probe\tm_process_source.e|last_samples|require|read: last_read_succeeded
+probe\tm_process_source.e|last_samples|ensure|fresh: Result /= last_samples
+probe\tm_process_source.e|last_samples|ensure|complete: Result.count = samples.count
+probe\tm_process_source.e|kind_name|ensure|named: not Result.is_empty
+probe\tm_process_source.e|has_idle_entry|require|read: last_read_succeeded
+probe\tm_process_source.e|has_sample|require|read: last_read_succeeded
+probe\tm_self_check.e|make_not_run|ensure|not_run: not has_run and not passed
+probe\tm_self_check.e|pass|require|not_decided: not has_run
+probe\tm_self_check.e|pass|ensure|passed: has_run and passed
+probe\tm_self_check.e|pass|ensure|no_failure: failure.is_empty
+probe\tm_self_check.e|fail|require|not_decided: not has_run
+probe\tm_self_check.e|fail|require|reason_given: not a_reason.is_empty
+probe\tm_self_check.e|fail|ensure|failed: has_run and not passed
+probe\tm_self_check.e|fail|ensure|reason_kept: failure.same_string (a_reason)
+probe\tm_self_check.e|fail_field|require|not_decided: not has_run
+probe\tm_self_check.e|fail_field|require|field_given: not a_field.is_empty
+probe\tm_self_check.e|fail_field|ensure|failed: has_run and not passed
+probe\tm_self_check.e|fail_field|ensure|field_kept: failing_field.same_string (a_field)
+probe\tm_self_check.e|fail_field|ensure|values_kept: value_before = a_before and value_native = a_native and value_after = a_after
+probe\tm_self_check.e|fail_field|ensure|explained: not failure.is_empty
+probe\tm_self_check.e|passed_has_no_failure|invariant|passed_has_run: passed implies has_run
+probe\tm_self_check.e|failure_explained|invariant|passed_has_no_failure: passed implies failure.is_empty
+probe\tm_self_check.e|not_run_is_blank|invariant|failure_explained: (has_run and not passed) implies not failure.is_empty
+probe\tm_self_check.e|not_run_is_blank|invariant|not_run_is_blank: not has_run implies failure.is_empty
+probe\tm_self_process.e|make|ensure|real_process: id.pid > 0 and id.creation_ticks > 0
+probe\tm_system_clock.e|make|ensure|frequency_known: frequency > 0
+probe\tm_system_clock.e|frequency_known|invariant|frequency_known: frequency > 0
+probe\tm_system_source.e|refresh|require|open: not is_closed
+probe\tm_system_source.e|refresh|ensure|sealed: last_readings.is_sealed
+probe\tm_system_source.e|refresh|ensure|unsupported_reads_as_declared: across metrics.codes as ic all (support_of (ic) /= {TM_READING_STATUS}.Available and not metrics.metric (ic).is_instanced) implies last_readings.reading (ic, {STRING_32} "").status = support_of (ic) end
+probe\tm_system_source.e|refresh|ensure|supported_present: across metrics.codes as ic all (support_of (ic) = {TM_READING_STATUS}.Available and not metrics.metric (ic).is_instanced) implies last_readings.has (ic, {STRING_32} "") end
+probe\tm_system_source.e|close|ensure|closed: is_closed
+probe\tm_system_source.e|support_of|require|known_metric: metrics.has_code (a_code)
+probe\tm_system_source.e|support_of|ensure|known_status: Result >= {TM_READING_STATUS}.Available and Result <= {TM_READING_STATUS}.Invalid
+probe\tm_system_source.e|support_reason|require|known_metric: metrics.has_code (a_code)
+probe\tm_system_source.e|support_reason|ensure|explained: support_of (a_code) /= {TM_READING_STATUS}.Available implies not Result.is_empty
+probe\tm_system_source.e|support_reason|ensure|blank_when_supported: support_of (a_code) = {TM_READING_STATUS}.Available implies Result.is_empty
+probe\tm_system_source.e|supported_codes|ensure|each_supported: across Result as ic all support_of (ic) = {TM_READING_STATUS}.Available end
+probe\tm_system_source.e|logical_processors|ensure|positive: Result > 0
+probe\tm_system_source.e|status_reading|require|not_available: a_status >= {TM_READING_STATUS}.Unavailable and a_status <= {TM_READING_STATUS}.Invalid
+probe\tm_system_source.e|status_reading|ensure|status_kept: Result.status = a_status
+probe\tm_system_source.e|readings_sealed|invariant|readings_sealed: last_readings.is_sealed
+probe\tm_win_system_source.e|make|ensure|every_metric_decided: across metrics.codes as ic all support.has (ic) end
+probe\tm_win_system_source.e|make|ensure|open: not is_closed
+probe\tm_win_system_source.e|close|ensure then|query_closed: query.is_closed
+probe\tm_win_system_source.e|decide_support|ensure|every_metric_decided: across metrics.codes as ic all support.has (ic) end
+probe\tm_win_system_source.e|refuse|require|reason_given: not a_reason.is_empty
+probe\tm_win_system_source.e|support_decided|invariant|support_decided: support.count = metrics.count
+probe\scripted\tm_scripted_process_source.e|make|ensure|empty: rounds_remaining = 0
+probe\scripted\tm_scripted_process_source.e|make|ensure|open: not is_closed
+probe\scripted\tm_scripted_process_source.e|make_native_like|ensure|empty: rounds_remaining = 0
+probe\scripted\tm_scripted_process_source.e|make_native_like|ensure|native: is_native
+probe\scripted\tm_scripted_process_source.e|add_round|require|idle_when_native: is_native implies across a_samples as ic some ic.id.is_idle_pseudo_process end
+probe\scripted\tm_scripted_process_source.e|add_round|ensure|one_more: rounds_remaining = old rounds_remaining + 1
+probe\scripted\tm_scripted_process_source.e|add_failure|require|reason_given: not a_reason.is_empty
+probe\scripted\tm_scripted_process_source.e|add_failure|ensure|one_more: rounds_remaining = old rounds_remaining + 1
+probe\scripted\tm_scripted_process_source.e|read_all|ensure then|consumed: old rounds_remaining > 0 implies rounds_remaining = old rounds_remaining - 1
+probe\scripted\tm_scripted_process_source.e|next_in_range|invariant|parallel_script: rounds.count = failures.count
+probe\scripted\tm_scripted_process_source.e|next_in_range|invariant|next_in_range: next_round >= 1 and next_round <= rounds.count + 1
+probe\scripted\tm_scripted_system_source.e|make|require|processors: a_logical_processors > 0
+probe\scripted\tm_scripted_system_source.e|make|ensure|processors_kept: logical_processors = a_logical_processors
+probe\scripted\tm_scripted_system_source.e|make|ensure|not_refreshed: not has_refreshed
+probe\scripted\tm_scripted_system_source.e|make|ensure|open: not is_closed
+probe\scripted\tm_scripted_system_source.e|declare_support|require|before_first_refresh: not has_refreshed
+probe\scripted\tm_scripted_system_source.e|declare_support|require|known_metric: metrics.has_code (a_code)
+probe\scripted\tm_scripted_system_source.e|declare_support|require|known_status: a_status >= {TM_READING_STATUS}.Available and a_status <= {TM_READING_STATUS}.Invalid
+probe\scripted\tm_scripted_system_source.e|declare_support|require|reason_iff_unsupported: (a_status = {TM_READING_STATUS}.Available) = a_reason.is_empty
+probe\scripted\tm_scripted_system_source.e|declare_support|ensure|declared: support_of (a_code) = a_status
+probe\scripted\tm_scripted_system_source.e|script_reading|require|known_metric: metrics.has_code (a_code)
+probe\scripted\tm_scripted_system_source.e|script_reading|require|supported: support_of (a_code) = {TM_READING_STATUS}.Available
+probe\scripted\tm_scripted_system_source.e|script_reading|require|instance_rule: metrics.metric (a_code).is_instanced = not a_instance.is_empty
+probe\scripted\tm_scripted_system_source.e|script_reading|ensure|pending_grew: pending_count = old pending_count + 1
+probe\scripted\tm_scripted_system_source.e|end_round|ensure|one_more: rounds_remaining = old rounds_remaining + 1
+probe\scripted\tm_scripted_system_source.e|end_round|ensure|pending_empty: pending_count = 0
+probe\scripted\tm_scripted_system_source.e|refresh|ensure then|refreshed: has_refreshed
+probe\scripted\tm_scripted_system_source.e|refresh|ensure then|consumed: old rounds_remaining > 0 implies rounds_remaining = old rounds_remaining - 1
+probe\scripted\tm_scripted_system_source.e|next_in_range|invariant|processors: scripted_processors > 0
+probe\scripted\tm_scripted_system_source.e|next_in_range|invariant|next_in_range: next_round >= 1 and next_round <= rounds.count + 1
+sampling\tm_capabilities.e|make|require|kind_given: not a_process_source_kind.is_empty
+sampling\tm_capabilities.e|make|ensure|every_metric: count = metrics.count
+sampling\tm_capabilities.e|make|ensure|as_declared: across metrics.codes as ic all support_of (ic) = a_system.support_of (ic) end
+sampling\tm_capabilities.e|make|ensure|kind_kept: process_source_kind.same_string (a_process_source_kind)
+sampling\tm_capabilities.e|make|ensure|reason_kept: fallback_reason.same_string (a_fallback_reason)
+sampling\tm_capabilities.e|make_empty|ensure|empty: count = 0
+sampling\tm_capabilities.e|support_of|require|present: has (a_code)
+sampling\tm_capabilities.e|support_of|ensure|known_status: Result >= {TM_READING_STATUS}.Available and Result <= {TM_READING_STATUS}.Invalid
+sampling\tm_capabilities.e|reason_of|require|present: has (a_code)
+sampling\tm_capabilities.e|is_supported|require|present: has (a_code)
+sampling\tm_capabilities.e|put|require|known_metric: metrics.has_code (a_code)
+sampling\tm_capabilities.e|put|require|not_yet: not has (a_code)
+sampling\tm_capabilities.e|put|require|known_status: a_status >= {TM_READING_STATUS}.Available and a_status <= {TM_READING_STATUS}.Invalid
+sampling\tm_capabilities.e|put|ensure|reported: has (a_code) and support_of (a_code) = a_status
+sampling\tm_capabilities.e|put|ensure|reason_kept: reason_of (a_code).same_string (a_reason)
+sampling\tm_capabilities.e|put|ensure|one_more: count = old count + 1
+sampling\tm_capabilities.e|put|ensure|others_unchanged: support_model.removed (a_code) |=| old support_model
+sampling\tm_capabilities.e|set_process_source|require|kind_given: not a_kind.is_empty
+sampling\tm_capabilities.e|set_process_source|ensure|kind_kept: process_source_kind.same_string (a_kind)
+sampling\tm_capabilities.e|set_process_source|ensure|reason_kept: fallback_reason.same_string (a_fallback_reason)
+sampling\tm_capabilities.e|support_model|ensure|same_count: Result.count = count
+sampling\tm_capabilities.e|parallel|invariant|parallel: support.count = reasons.count
+sampling\tm_frame_builder.e|build|require|ordered: a_current.monotonic_ticks > a_previous.monotonic_ticks
+sampling\tm_frame_builder.e|build|require|span_ordered: a_end_ticks > a_start_ticks
+sampling\tm_frame_builder.e|build|require|processors: a_logical_processors > 0
+sampling\tm_frame_builder.e|build|require|cost_non_negative: a_previous_cost >= 0
+sampling\tm_frame_builder.e|build|require|self_not_idle: attached a_self as al_self implies not al_self.is_idle_pseudo_process
+sampling\tm_frame_builder.e|build|ensure|span: Result.start_ticks = a_start_ticks and Result.end_ticks = a_end_ticks
+sampling\tm_frame_builder.e|build|ensure|duration: Result.duration = a_current.monotonic_ticks - a_previous.monotonic_ticks
+sampling\tm_frame_builder.e|build|ensure|adjusted_kept: Result.is_clock_adjusted = a_clock_adjusted
+sampling\tm_frame_builder.e|build|ensure|live: not Result.is_discontinuity and Result.is_complete
+sampling\tm_frame_builder.e|build|ensure|every_current_process: Result.activity_count = a_current.count - idle_count (a_current) and across a_current.samples as ic all ic.id.is_idle_pseudo_process or else Result.has_activity (ic.id) end
+sampling\tm_frame_builder.e|build|ensure|no_rate_across_identities: across Result.activities as ic all ic.is_new = not a_previous.has (ic.id) end
+sampling\tm_frame_builder.e|build|ensure|born_are_the_new_ones: Result.born.count = new_count (Result)
+sampling\tm_frame_builder.e|build|ensure|exited_exactly: Result.exited.count = exited_count (a_previous, a_current) and across Result.exited as ic all a_previous.has (ic.id) and not a_current.has (ic.id) end
+sampling\tm_frame_builder.e|build|ensure|system_readings_kept: Result.readings.includes (a_current.readings)
+sampling\tm_frame_builder.e|build|ensure|self_cost_recorded: Result.readings.has ({TM_METRICS}.Sample_cost_ms, {STRING_32} "")
+sampling\tm_frame_builder.e|build|ensure|self_cpu_recorded: Result.readings.has ({TM_METRICS}.Self_cpu_pct, {STRING_32} "")
+sampling\tm_frame_builder.e|build|ensure|self_memory_recorded: Result.readings.has ({TM_METRICS}.Self_private_bytes, {STRING_32} "")
+sampling\tm_frame_builder.e|build|ensure|self_unavailable_when_absent: not (attached a_self as al_self and then a_current.has (al_self)) implies Result.readings.reading ({TM_METRICS}.Self_cpu_pct, {STRING_32} "").is_unavailable
+sampling\tm_frame_builder.e|discontinuity|require|ordered: a_current.monotonic_ticks > a_previous.monotonic_ticks
+sampling\tm_frame_builder.e|discontinuity|require|span_ordered: a_end_ticks > a_start_ticks
+sampling\tm_frame_builder.e|discontinuity|require|processors: a_logical_processors > 0
+sampling\tm_frame_builder.e|discontinuity|ensure|flagged: Result.is_discontinuity
+sampling\tm_frame_builder.e|discontinuity|ensure|empty: Result.activity_count = 0
+sampling\tm_frame_builder.e|discontinuity|ensure|span: Result.start_ticks = a_start_ticks and Result.end_ticks = a_end_ticks
+sampling\tm_frame_builder.e|discontinuity|ensure|adjusted_kept: Result.is_clock_adjusted = a_clock_adjusted
+sampling\tm_frame_builder.e|put_self_readings|require|open: not a_readings.is_sealed
+sampling\tm_frame_builder.e|put_self_readings|require|cost_non_negative: a_previous_cost >= 0
+sampling\tm_frame_builder.e|put_self_readings|ensure|all_three: a_readings.has ({TM_METRICS}.Self_cpu_pct, {STRING_32} "") and a_readings.has ({TM_METRICS}.Self_private_bytes, {STRING_32} "") and a_readings.has ({TM_METRICS}.Sample_cost_ms, {STRING_32} "")
+sampling\tm_frame_builder.e|idle_count|ensure|bounded: Result >= 0 and Result <= a_snapshot.count
+sampling\tm_frame_builder.e|new_count|ensure|bounded: Result >= 0 and Result <= a_frame.activity_count
+sampling\tm_frame_builder.e|exited_count|ensure|bounded: Result >= 0 and Result <= a_previous.count
+sampling\tm_sampler.e|make|require|trusted: a_processes.is_trusted
+sampling\tm_sampler.e|make|require|open_sources: not a_processes.is_closed and not a_system.is_closed
+sampling\tm_sampler.e|make|ensure|sources_kept: process_source = a_processes and system_source = a_system and clock = a_clock
+sampling\tm_sampler.e|make|ensure|nothing_yet: not has_snapshot and not has_frame
+sampling\tm_sampler.e|make|ensure|counters_zero: snapshots_taken = 0 and frames_made = 0 and discontinuities = 0
+sampling\tm_sampler.e|make|ensure|default_interval: nominal_interval = Default_interval
+sampling\tm_sampler.e|make|ensure|no_self: self_id = Void
+sampling\tm_sampler.e|make|ensure|wall_time: utc_offset = 0 and last_end_ticks = 0
+sampling\tm_sampler.e|last_snapshot|require|has_snapshot: has_snapshot
+sampling\tm_sampler.e|previous_snapshot|require|has_previous: has_previous_snapshot
+sampling\tm_sampler.e|last_frame|require|has_frame: has_frame
+sampling\tm_sampler.e|clock_change|require|ordered: a_current.monotonic_ticks > a_previous.monotonic_ticks
+sampling\tm_sampler.e|clock_change|ensure|zero_means_wall_advanced: Result = 0 implies a_current.utc_ticks > a_previous.utc_ticks
+sampling\tm_sampler.e|set_nominal_interval|require|sane: a_ticks >= Minimum_interval and a_ticks <= Maximum_interval
+sampling\tm_sampler.e|set_nominal_interval|ensure|kept: nominal_interval = a_ticks
+sampling\tm_sampler.e|set_self_id|require|not_idle: not a_id.is_idle_pseudo_process
+sampling\tm_sampler.e|set_self_id|ensure|kept: self_id = a_id
+sampling\tm_sampler.e|sample|require|open_sources: not process_source.is_closed and not system_source.is_closed
+sampling\tm_sampler.e|sample|ensure|snapshot_taken: has_snapshot and snapshots_taken = old snapshots_taken + 1
+sampling\tm_sampler.e|sample|ensure|previous_kept: previous_snapshot_cell = old last_snapshot_cell
+sampling\tm_sampler.e|sample|ensure|frame_after_first: (old has_snapshot) = has_frame
+sampling\tm_sampler.e|sample|ensure|counted: has_frame implies frames_made = old frames_made + 1
+sampling\tm_sampler.e|sample|ensure|gap_counted: (has_frame and then last_frame.is_discontinuity) implies discontinuities = old discontinuities + 1
+sampling\tm_sampler.e|sample|ensure|live_not_counted: (has_frame and then not last_frame.is_discontinuity) implies discontinuities = old discontinuities
+sampling\tm_sampler.e|sample|ensure|gap_rule: has_frame implies last_frame.is_discontinuity = is_gap (previous_snapshot, last_snapshot)
+sampling\tm_sampler.e|sample|ensure|continuous: (has_frame and old last_end_ticks > 0) implies last_frame.start_ticks = old last_end_ticks
+sampling\tm_sampler.e|sample|ensure|first_from_wall: (has_frame and old last_end_ticks = 0) implies last_frame.start_ticks = previous_snapshot.utc_ticks
+sampling\tm_sampler.e|sample|ensure|offset_rule: has_frame implies utc_offset = (old utc_offset - clock_change (previous_snapshot, last_snapshot)).max (0)
+sampling\tm_sampler.e|sample|ensure|end_rule: has_frame implies last_frame.end_ticks = last_snapshot.utc_ticks + utc_offset
+sampling\tm_sampler.e|sample|ensure|adjusted_iff_changed: has_frame implies (last_frame.is_clock_adjusted = (clock_change (previous_snapshot, last_snapshot) /= 0))
+sampling\tm_sampler.e|sample|ensure|end_recorded: has_frame implies last_end_ticks = last_frame.end_ticks
+sampling\tm_sampler.e|sample|ensure|cost_measured: last_tick_cost >= 0
+sampling\tm_sampler.e|sample|ensure|interval_unchanged: nominal_interval = old nominal_interval
+sampling\tm_sampler.e|snapshots_bound_frames|invariant|frames_bounded: frames_made >= discontinuities
+sampling\tm_sampler.e|interval_sane|invariant|snapshots_bound_frames: snapshots_taken >= frames_made
+sampling\tm_sampler.e|cost_non_negative|invariant|interval_sane: nominal_interval >= Minimum_interval and nominal_interval <= Maximum_interval
+sampling\tm_sampler.e|frame_needs_snapshot|invariant|cost_non_negative: last_tick_cost >= 0
+sampling\tm_sampler.e|offset_non_negative|invariant|frame_needs_snapshot: has_frame implies has_snapshot
+sampling\tm_sampler.e|timeline_on_wall_plus_offset|invariant|offset_non_negative: utc_offset >= 0
+sampling\tm_sampler.e|self_not_idle|invariant|timeline_on_wall_plus_offset: has_frame implies last_end_ticks = last_snapshot.utc_ticks + utc_offset
+sampling\tm_sampler.e|self_not_idle|invariant|self_not_idle: attached self_id as al_self implies not al_self.is_idle_pseudo_process
+sampling\tm_self_budget.e|make|require|bound_positive: a_cpu_bound_pct > 0.0
+sampling\tm_self_budget.e|make|require|ordered: 0 < a_minimum_ms and a_minimum_ms <= a_maximum_ms
+sampling\tm_self_budget.e|make|ensure|kept: cpu_bound_pct = a_cpu_bound_pct and minimum_ms = a_minimum_ms and maximum_ms = a_maximum_ms
+sampling\tm_self_budget.e|make|ensure|starts_fast: interval_ms = a_minimum_ms
+sampling\tm_self_budget.e|make|ensure|no_history: over_streak = 0 and under_streak = 0 and changes = 0
+sampling\tm_self_budget.e|assess|require|cost_non_negative: a_tick_cost >= 0
+sampling\tm_self_budget.e|assess|require|interval_positive: a_interval > 0
+sampling\tm_self_budget.e|assess|ensure|share_recorded: last_share_pct = a_tick_cost * 100.0 / a_interval
+sampling\tm_self_budget.e|assess|ensure|within_bounds: interval_ms >= minimum_ms and interval_ms <= maximum_ms
+sampling\tm_self_budget.e|assess|ensure|over_resets_under: last_share_pct > cpu_bound_pct implies under_streak = 0
+sampling\tm_self_budget.e|assess|ensure|under_resets_over: last_share_pct <= cpu_bound_pct implies over_streak = 0
+sampling\tm_self_budget.e|assess|ensure|backs_off: (last_share_pct > cpu_bound_pct and old over_streak + 1 >= Over_limit and old interval_ms < maximum_ms) implies interval_ms > old interval_ms
+sampling\tm_self_budget.e|assess|ensure|never_speeds_up_while_over: last_share_pct > cpu_bound_pct implies interval_ms >= old interval_ms
+sampling\tm_self_budget.e|assess|ensure|speeds_up_only_when_quiet: interval_ms < old interval_ms implies (last_share_pct <= cpu_bound_pct and old under_streak + 1 >= Under_limit)
+sampling\tm_self_budget.e|assess|ensure|logged_on_change: interval_ms /= old interval_ms implies changes = old changes + 1
+sampling\tm_self_budget.e|assess|ensure|quiet_when_unchanged: interval_ms = old interval_ms implies changes = old changes
+sampling\tm_self_budget.e|assess|ensure|streaks_reset_on_change: interval_ms /= old interval_ms implies (over_streak = 0 and under_streak = 0)
+sampling\tm_self_budget.e|ordered|invariant|bound_positive: cpu_bound_pct > 0.0
+sampling\tm_self_budget.e|within_bounds|invariant|ordered: 0 < minimum_ms and minimum_ms <= maximum_ms
+sampling\tm_self_budget.e|streaks_non_negative|invariant|within_bounds: interval_ms >= minimum_ms and interval_ms <= maximum_ms
+sampling\tm_self_budget.e|one_streak_at_a_time|invariant|streaks_non_negative: over_streak >= 0 and under_streak >= 0
+sampling\tm_self_budget.e|changes_non_negative|invariant|one_streak_at_a_time: over_streak = 0 or under_streak = 0
+sampling\tm_self_budget.e|changes_non_negative|invariant|changes_non_negative: changes >= 0

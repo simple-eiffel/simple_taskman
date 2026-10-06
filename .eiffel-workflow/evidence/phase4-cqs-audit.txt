@@ -1,0 +1,122 @@
+# Phase 4.5: CQS Audit Results
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-05
+
+Method: every function in src/ (42 classes) checked for assignments to
+attributes, calls to mutating features, object creation of attributes, file
+or OS I/O, and externals. Mechanical pass with a scratchpad script
+(cqs_scan.py), then a manual pass for what it cannot see: signatures split
+over two lines, and I/O done through externals or locals.
+
+## Violations Found
+
+### VIOLATION 1: TM_SAMPLING_WORKER.safe_tick
+**Type:** Command with a return value (samples the machine, adjusts the interval, counts failures, returns the encoded frame)
+**Location:** src/handoff/tm_sampling_worker.e, line 200
+**Issue:** The loop's work and its result are one function; a caller cannot ask for the frame text without sampling again.
+**Fix:** Procedure `tick (a_taskman, a_budget)` that leaves the text in `tick_text: detachable STRING_8`; the loop reads it.
+**Severity:** HIGH (private, but it is the heart of the worker)
+
+### VIOLATION 2: TM_SAMPLING_WORKER.started_taskman
+**Type:** Command with a return value (creates the facade, which reads the machine; sets `start_capabilities_text` and `last_failure`)
+**Location:** src/handoff/tm_sampling_worker.e, line 160
+**Issue:** Start-up and its result in one function, with two attributes set as side effects.
+**Fix:** Procedure `start` that leaves the facade in `taskman_cell: detachable SIMPLE_TASKMAN`; its postconditions move with it.
+**Severity:** HIGH
+
+### VIOLATION 3: TM_FRAME_FILE_REPLAYER.file_text
+**Type:** File I/O in a function
+**Location:** src/handoff/tm_frame_file_replayer.e, line 133
+**Issue:** Every call opens and reads the file.
+**Fix:** Procedure `load_file` that leaves the contents in `file_contents: detachable STRING_8`.
+**Severity:** MEDIUM
+
+### VIOLATION 4: TM_FRAME_CODEC.decoded_reading, decoded_activity
+**Type:** Function that changes its argument (puts into the caller's readings / activity table) and returns the problem text
+**Location:** src/handoff/tm_frame_codec.e, lines 503 and 534
+**Issue:** A query-shaped call with a side effect on the caller's structure.
+**Fix:** Procedures `decode_reading`, `decode_activity` that leave any problem in `line_failure: STRING_32`.
+**Severity:** MEDIUM
+
+### VIOLATION 5: TM_DOCUMENTED_PROCESS_SOURCE.sample_of
+**Type:** OS I/O in a function (OpenProcess, reads, CloseHandle)
+**Location:** src/probe/tm_documented_process_source.e, line 93
+**Issue:** A factory-shaped function that opens and closes process handles.
+**Fix:** Procedure `extend_sample (a_list, a_entry, a_values)` that appends to the list being built.
+**Severity:** MEDIUM
+
+### VIOLATION 6: TM_COUNTER_QUERY.added
+**Type:** Command with a return value (private helper)
+**Location:** src/probe/tm_counter_query.e, line 168
+**Issue:** The public add_english is a documented exception (below); its private helper need not be.
+**Fix:** Procedure `add_counter (a_path, a_format)` setting `last_added: INTEGER`; add_english keeps its documented signature.
+**Severity:** MEDIUM
+
+## Acceptable Exceptions (Whitelisted)
+
+### EXCEPTION 1: SIMPLE_TASKMAN.set_nominal_interval, set_self_id, set_logger
+**Type:** Fluent API
+**Justification:** Return `like Current` for chaining (spec 06). set_logger's log line goes through the injected logger, not one it creates.
+
+### EXCEPTION 2: TM_COUNTER_QUERY.add_english, add_english_uncapped
+**Type:** Documented CQS exception (spec 06, "Command-Query Separation")
+**Justification:** The returned index is the handle to what was added, like a creation result; postconditions tie it to `last_status` and `counter_count`.
+
+### EXCEPTION 3: TM_FRAME_CODEC.bits_text, real_of_bits
+**Type:** Scratch buffer in a once feature
+**Justification:** The once MANAGED_POINTER is written and read within one call; no observable state changes (abstract-side-effect free). A once is per processor under SCOOP, so no two processors share it.
+
+### EXCEPTION 4: Read-only environment queries
+**Type:** Queries that read the OS or clock without changing any object
+**Justification:** TM_SYSTEM_CLOCK.utc_ticks and monotonic_ticks (time is the value asked for); TM_COUNTER_QUERY.values (reads the last collection; repeated calls agree until the next collect); TM_NATIVE_PROCESS_SOURCE.own_image_name; TM_WIN_SYSTEM_SOURCE.fixed_drive_count.
+
+### EXCEPTION 5: Private externals (c_*)
+**Type:** C wrappers returning a status or a value
+**Justification:** 37 private externals; those that change OS state (c_open, c_add, c_collect, c_close, c_query, c_first, c_next, c_snapshot) are called only from commands. Returning the Win32 status is the ordinary inline-C shape.
+
+### EXCEPTION 6: Factory queries
+**Type:** Functions that build and return a new object
+**Justification:** No existing state changes: TM_FRAME_BUILDER.build and discontinuity, TM_FRAME.activities/born/exited, TM_PROCESS_SOURCE.last_samples, TM_METRICS.all_metrics/codes, TM_READINGS.instances, TM_FRAME_CODEC.encode/frame_texts_in/line_problem (frame_texts_in appends only to strings it creates), TM_WIN_SYSTEM_SOURCE.counter_reading/measured, TM_FORMAT text queries.
+
+## Summary
+
+Violations found: 6
+Critical: 0
+High: 2
+Medium: 4
+
+Whitelisted exceptions: 6 groups
+
+Status: FAIL (awaiting decision: fix and re-run)
+
+## Resolution (2026-10-05): Larry chose "fix all and re-run"
+
+All six fixed as proposed:
+  1. TM_SAMPLING_WORKER.safe_tick       -> procedure tick, result in tick_text
+  2. TM_SAMPLING_WORKER.started_taskman -> procedure start, result in taskman_cell
+  3. TM_FRAME_FILE_REPLAYER.file_text   -> procedure load_file, result in file_contents
+  4. TM_FRAME_CODEC.decoded_reading, decoded_activity -> procedures decode_reading,
+     decode_activity, problem in line_failure
+  5. TM_DOCUMENTED_PROCESS_SOURCE.sample_of -> procedure extend_sample (appends)
+  6. TM_COUNTER_QUERY.added             -> procedure add_counter, index in last_added
+
+Re-scan (cqs_scan.py) after the fixes: only the whitelisted cases remain
+(fluent setters; bits_text and real_of_bits on the scratch buffer;
+frame_texts_in on its own new strings). Manual pass: no function performs
+I/O or changes state outside the whitelist.
+
+Contracts (phase4-contracts-after.txt vs phase45-contracts-after-cqs.txt):
+  moved, same meaning: started_taskman.reason_when_failed and
+    capabilities_when_started -> start (Result replaced by taskman_cell)
+  added on the new procedures: tick.text_only_with_a_frame,
+    add_counter.index_or_zero
+  no public contract changed
+
+Clean rebuild (EIFGENs deleted):
+  ec.sh check -target simple_taskman_measure: System Recompiled, no errors or warnings
+  ec.sh test  -target simple_taskman_tests:   System Recompiled; Built; no Error code,
+    Warning code, warning C, or error C
+  F_code run on JACKJACK: Results: 161 passed, 0 failed - ALL TESTS PASSED
+
+Violations remaining: 0
+Status: PASS

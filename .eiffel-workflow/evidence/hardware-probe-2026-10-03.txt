@@ -1,0 +1,198 @@
+# Hardware / sensor probe evidence
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-03 (run from a NON-ADMIN PowerShell 7 session)
+# Machine: JACKJACK
+# Purpose: find out which telemetry is actually readable on this machine
+#          without a kernel driver and without elevation.
+# Everything below is pasted command output, lightly trimmed (long instance
+# lists cut). Nothing here is inferred.
+
+=== CPU ===
+Name                      : AMD Ryzen 9 7945HX with Radeon Graphics
+NumberOfCores             : 16
+NumberOfLogicalProcessors : 32
+
+=== OS / RAM ===
+Caption : Microsoft Windows 11 Pro
+Version : 10.0.26200
+RAM_GB  : 29.7
+
+=== GPU ===
+Name                       DriverVersion
+AMD Radeon(TM) 610M        32.0.21030.2001
+NVIDIA GeForce RTX 5070 Ti 32.0.15.9186
+
+=== Battery ===
+NO BATTERY (desktop)
+
+=== Disks ===
+FriendlyName               MediaType BusType      GB
+KINGSTON OM8TAP41024K1-A00 SSD       NVMe     954.00
+WD Elements 25A1           HDD       USB     3726.00
+
+=== Is admin? ===
+False
+
+=== Process count (Get-Process) ===
+351
+
+=== Performance counter sets (Get-Counter -ListSet) ===
+Thermal Zone Information     PRESENT  counters=4
+Energy Meter                 PRESENT  counters=3
+GPU Engine                   PRESENT  counters=2
+GPU Adapter Memory           PRESENT  counters=3
+GPU Process Memory           PRESENT  counters=5
+Processor Information        PRESENT  counters=29
+PhysicalDisk                 PRESENT  counters=21
+Memory                       PRESENT  counters=36
+Process V2                   PRESENT  counters=28
+Power Meter                  PRESENT  counters=2
+User Input Delay per Process ABSENT
+User Input Delay per Session ABSENT
+
+=== Thermal Zone Information ===
+Counters: High Precision Temperature, Throttle Reasons, % Passive Limit, Temperature
+Instances: NONE (PathsWithInstances lists only the wildcard paths)
+Sample:   SAMPLE FAILED: The specified instance is not present.
+==> The counter SET exists but this machine exposes NO thermal zone instance.
+
+=== WMI MSAcpi_ThermalZoneTemperature (root/wmi) ===
+FAILED: Not supported
+
+=== Power Meter ===
+Counters: Power Budget, Power
+Sample:   SAMPLE FAILED: The specified instance is not present.
+
+=== Energy Meter (RAPL) -- READABLE WITHOUT ADMIN ===
+Counters: Power, Energy, Time
+Instances: RAPL_Package0_Core0_CORE .. RAPL_Package0_Core15_CORE,
+           RAPL_Package0_PKG, _Total
+Energy sample: total samples 54, nonzero 52
+Power sample (CookedValue):
+  rapl_package0_core0_core                 2707.6369360287226
+  rapl_package0_core1_core                 12665.924378457925
+  rapl_package0_pkg                        61236.96373604995
+  _total                                   0
+
+--- Unit verification (two readings of pkg Energy/Time/Power ~3 s apart) ---
+raw dEnergy=51377912500  raw dTime=3011  Power(a)=61591.7252924018 Power(b)=60368.5485023819
+if Energy is picowatt-hours: joules = 184.960485
+if Energy is nanojoules:     joules = 51.3779125
+Interpretation (arithmetic, not assumption):
+  184.960485 J / 3.011 s = 61.4 W  -> matches the Power counter (60.4 .. 61.6 W as mW)
+  51.38 J / 3.011 s      = 17.1 W  -> does NOT match
+  ==> Energy counter unit = picowatt-hours (agrees with Microsoft EMI docs)
+  ==> Time counter unit   = milliseconds
+  ==> Power counter unit  = milliwatts
+  ==> "_Total" Power reads 0 and must not be used; use the PKG instance.
+
+=== GPU Engine -- per process, READABLE WITHOUT ADMIN ===
+Counters: Utilization Percentage, Running Time
+Instance naming: pid_<PID>_luid_<LUID>_phys_<N>_eng_<N>_engtype_<3D|VideoDecode|Copy|VideoEncode|...>
+Sample: total samples 1384, nonzero 81
+NOTE: three "Running Time" cooked values came back as ~1.8446744E+19
+      (looks like an unsigned wraparound of a negative delta). Any consumer
+      must treat such values as invalid, not as measurements.
+
+=== GPU Adapter Memory -- READABLE WITHOUT ADMIN ===
+luid_0x00000000_0x0000c480_phys_0  total committed = 3525500928
+luid_0x00000000_0x0000c480_phys_0  dedicated usage = 2842804224
+(3 adapters listed; 9 samples, 8 nonzero)
+
+=== nvidia-smi ===
+nvidia-smi not on PATH
+
+=== Hybrid core check (GetLogicalProcessorInformationEx, RelationProcessorCore) ===
+cores=16  EfficiencyClass 0: 16 cores
+==> NOT a hybrid CPU. Performance/efficiency core display cannot be
+    exercised on this machine.
+
+=== ISE library check (grep of library\wel, library\process, library\base) ===
+Hits for CreateToolhelp32Snapshot|EnumProcesses|NtQuerySystemInformation|PdhOpenQuery|GetProcessMemoryInfo:
+  library\process\base\platform\windows\process_utility.e
+  library\process\classic\windows\wel_toolhelp.e
+(Toolhelp wrapper returning pid / parent pid / thread count / base priority /
+ exe name. No CPU time, memory, IO, PDH.)
+
+=== Gobo (contrib\library\gobo\library) clusters ===
+argument, common, free_elks, kernel, lexical, math, parse, pattern, regexp,
+string, structure, test, thread, time, tools, utility, xml, xpath, xslt
+(no process / system-metrics cluster)
+
+=== simple_* check ===
+simple_system/src/simple_system.e  (305 lines; static computer, directory,
+  processor, memory, OS information only)
+grep of simple_system/src simple_process/src simple_telemetry/src for
+  GetSystemTimes|NtQuerySystemInformation|Pdh*|GetProcessMemoryInfo|
+  GetProcessTimes|EnumProcesses|CreateToolhelp32Snapshot|GetSystemPowerStatus|
+  GlobalMemoryStatusEx|GetProcessIoCounters|GetLogicalProcessorInformation*|
+  GetDiskFreeSpaceEx  -> no hits
+oracle-cli query "Which libraries use inline C?" -> No results found
+Present ECFs: simple_sql simple_statistics simple_pdf simple_ai_client
+  simple_scheduler simple_shell simple_json simple_cli simple_datetime
+  simple_logger simple_registry simple_file (all True)
+simple_widgets README: "A drawn widget toolkit for Eiffel on pure Win32 --
+  no Vision2, no GTK, no native controls." 327/327 tests badge, v0.8.1.
+  src contains sw_sparkline, sw_line_chart, sw_gauge, sw_heatmap, sw_treemap,
+  sw_sankey, sw_timeline, sw_data_grid, sw_tree_table, sw_dock_host.
+
+# SUMMARY OF WHAT THIS MACHINE CAN AND CANNOT VERIFY
+# CAN:    CPU package + per-core power (RAPL), per-process GPU, GPU memory,
+#         process table, disk, memory counters -- all as standard user.
+# CANNOT: temperature (no thermal zone instance, ACPI WMI unsupported),
+#         battery (none), hybrid cores (none), user-input-delay counters
+#         (absent), GPU power (no nvidia-smi on PATH; NVML untested).
+
+=== Ecosystem-wide grep of D:\prod (*.e, EIFGENs excluded) for the same API list ===
+Only hit: ./simple_speech/src/batch/speech_memory_monitor.e
+
+=== SPIKE 1: NtQuerySystemInformation(SystemProcessInformation), non-admin ===
+calls=50 processes=349 buffer_bytes=941656 min_ms=2.08 median_ms=2.48 max_ms=8.54
+self-check pid=42456: CreateTime(native)=2026-10-03T14:51:15.5876026-04:00  StartTime(.NET)=2026-10-03T14:51:15.5876026-04:00
+            UserTime(native)=0.578s  .NET=0.578s   KernelTime(native)=0.281s  .NET=0.281s
+Offsets used (x64): NextEntryOffset 0x00, CreateTime 0x20, UserTime 0x28,
+  KernelTime 0x30, UniqueProcessId 0x50. These sit inside the fields Microsoft
+  documents as Reserved1[48]; values matched the documented GetProcessTimes
+  path exactly for the calling process.
+==> One call returns all 349 processes in ~2.5 ms median, ~0.94 MB buffer.
+==> The undocumented-offset layout is correct on build 26200 and can be
+    self-verified at startup against the calling process.
+
+=== SPIKE 2: WM_NULL round trip (SendMessageTimeoutW, SMTO_ABORTIFHUNG, 250 ms) ===
+visible titled top-level windows: 12
+Obsidian               pid=20152  FG best=  0.054ms worst=  0.628ms fails=0/10 lastErr=0 hung=False
+WindowsTerminal        pid=8552      best=  0.036ms worst=  0.160ms fails=0/10 lastErr=0 hung=False
+msedge                 pid=10176     best=  0.047ms worst=  0.368ms fails=0/10 lastErr=0 hung=False
+msedge                 pid=10176     best=  0.046ms worst=  0.517ms fails=0/10 lastErr=0 hung=False
+msedge                 pid=10176     best=  0.046ms worst=  0.482ms fails=0/10 lastErr=0 hung=False
+e-Sword                pid=16288     best=  0.089ms worst=  0.454ms fails=0/10 lastErr=0 hung=False
+e-Sword                pid=16288     best=  0.091ms worst=  0.614ms fails=0/10 lastErr=0 hung=False
+TextInputHost          pid=32272     best=  0.077ms worst=  0.581ms fails=0/10 lastErr=0 hung=False
+NVIDIA Overlay         pid=5320      best=  0.047ms worst=  1.138ms fails=0/10 lastErr=0 hung=False
+Microsoft.CmdPal.UI    pid=16672     best=  0.065ms worst=  0.540ms fails=0/10 lastErr=0 hung=False
+Docker Desktop         pid=24548     best=  0.059ms worst=  1.007ms fails=0/10 lastErr=0 hung=False
+explorer               pid=13540     best=  0.063ms worst=  0.447ms fails=0/10 lastErr=0 hung=False
+==> Mechanism works for all 12 windows, 0 failures of 120 sends, as standard
+    user. Idle-machine baseline is well under 1.2 ms worst case.
+==> NOT yet shown: that the number rises under load, and behavior against an
+    ELEVATED window (none was open). A-5 is half validated; A-6 is untested.
+
+=== SPIKE 3: scheduler latency baseline ===
+Sleep(10) overshoot over 50 runs: min=3.79ms median=5.63ms max=6.54ms
+==> Default timer granularity dominates (about 15.6 ms tick). A Sleep-based
+    scheduler probe is too coarse; a waitable high-resolution timer or
+    QueryPerformanceCounter-based yield measurement is needed instead.
+
+=== ELEVATION PROBE (non-admin session; OpenProcess per running process) ===
+running as admin? False
+processes examined (excluding Idle and System): 339
+can open for QUERY (read details)        : 200  denied: 139
+can open for SET_INFORMATION (throttle)  : 189  denied: 150
+can open for TERMINATE (end task)        : 199  denied: 140
+names denied even for QUERY: AggregatorHostx1 amdfendrsrx1 armsvcx1 atieclxxx1 atiesrxxx1 conhostx1 cowork-svcx1 crashpad_handlerx1 csrssx2 dasHostx2 dwmx1 fontdrvhostx2 httpdx2 LsaIsox1 lsassx1 MpDefenderCoreServicex1 MsMpEngx1 NgcIsox1 NisSrvx1 nvcontainerx2 NVDisplay.Containerx2 pg_ctlx1 postgresx10 Registryx1 SearchIndexerx1 SearchProtocolHostx1 Secure Systemx1 SecurityHealthServicex1 servicesx1 smssx1 spoolsvx1 Surfshark.Servicex1 svchostx82 TeamViewer_Servicex1 tv_w32x1 tv_x64x1 vmcomputex1 vmmemWSLx1 vmwpx1 wininitx1 winlogonx1 wslservicex1 WUDFHostx1
+distinct names denied for throttle: 52
+(The "is the account in Administrators" check failed: whoami not found in
+ that shell. Whether this account can elevate through UAC is NOT verified.)
+==> Seeing all processes needs no rights (native table, 349 of 349).
+==> Acting on them does: about 44% refuse throttling without elevation,
+    mostly services (svchost x82, postgres x10, SearchIndexer, Defender).

@@ -1,0 +1,48 @@
+# Phase 2 Review Chain Evidence
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-05
+
+Review chain: Claude (adversarial self-review)
+Classes reviewed: 42 library (src/) + 14 test (testing/)
+Issues found: 21 = HIGH 4, MEDIUM 7, LOW 7, INFO 3
+
+HIGH issues:
+  1. MML set models in per-tick postconditions are cubic with contracts on
+     (measured: n=100 62 ms, n=350 2,797 ms, n=1000 65,484 ms; F_code -keep,
+     scratchpad benchmark mmlcost)
+  2. Wall clock set backward breaks frame ordering (TM_FRAME_BUILDER span vs
+     TM_WINDOW.extend in_order)
+  3. TM_READINGS.put does not check the reading against its metric
+  4. Worker start-up failures never reach the slot or the window
+
+Measured evidence gathered during the review:
+  - benchmark of MML_SET construction by repeated & (numbers above)
+  - source reading of simple_mml mml_set.e:137-151, 277-295 and mml_map.e:226-242, 356-363
+
+Oracle entries added: gotcha "MML_SET build is cubic with contracts on"
+
+Synopsis: .eiffel-workflow/synopsis.md
+Full review: .eiffel-workflow/evidence/phase2-claude-response.md
+Approach: .eiffel-workflow/approach.md
+
+Human approval: APPROVED 2026-10-05 (Larry), with choices:
+  issue 1: O(n) hash checks in hot-path postconditions; MML models for tests and small collections
+  issue 2: continuous timeline plus is_clock_adjusted flag
+  scope:   fix issues 1-11 before /eiffel.tasks; 12-18 to the task list
+
+Fixes applied: spec/10-ADDENDUM-REVIEW.md
+Recompiled from clean EIFGENs:
+  ec.sh check -target simple_taskman_measure ... System Recompiled. (no errors, no warnings)
+  ec.sh test  -target simple_taskman_tests ..... System Recompiled. / Built (1s ago)
+  grep of the build log for Error code|Warning code|warning C|error C: no matches
+Test run (F_code, contracts kept): Results: 67 passed, 40 failed
+  = the 38 Phase 4 stub failures from Phase 1
+  + 2 new timeline tests (clock set back / forward) failing on the sampler stub (snapshot_taken)
+  New tests passing now: value_filed_under_the_wrong_metric_refused,
+  reading_with_wrong_instance_form_refused, put_frame_condition_in_mml,
+  extend_frame_condition_in_mml, stopped_flag, injected_sources_have_no_self,
+  clock_change_rule
+  Acceptance (TEST_ACCEPTANCE) ran because COMPUTERNAME = JACKJACK; its 3 tests
+  fail on Phase 4 stubs (self-check, native read, support probing).
+
+# Status: COMPLETE (approved; fixes applied)

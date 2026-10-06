@@ -1,0 +1,17 @@
+# Changelog
+
+## [0.1.0] - unreleased (in development)
+
+### Added
+- Measurement library (P1): native process table with a layout self-check and a documented fallback; PDH counters for CPU, cores, utility, disks, hard faults, and package power; CPU topology across processor groups; memory and free-space gauges.
+- Honest readings: every value is checked against its metric's range; a missing value carries a status (unavailable, not supported, access denied, invalid) and is never shown as 0.
+- Process identity is pid plus creation time, so a recycled pid is a new process and never inherits its predecessor's rate.
+- Frames, windows, aggregates with coverage, series, and a lossless versioned text codec (TMF1).
+- Continuous timeline across wall-clock changes; frames are flagged when the clock moved.
+- SCOOP sampling worker and frame slot; replay worker.
+- `taskman` window, `taskman_cli` (snapshot, capabilities, synthetic, clockwatch), `taskman_stress` (cpu, memory, uncached disk).
+
+### Technical
+- Design by Contract throughout; void-safe; SCOOP.
+- 182 tests at the last full run, including scale tests (5,000 processes, 1,024 logical processors, an hour of frames), hostile input, and SCOOP races.
+- Inline C on system headers only; `_WIN32_WINNT` raised to 0x0A00 in the ECF (EiffelStudio's default C target is Windows 2000).

@@ -1,0 +1,146 @@
+# Phase 1 Compilation Evidence
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-05
+# Commands (mode word first; the skill's raw -batch/-c_compile form is rejected by ec.sh):
+#   /d/prod/ec.sh check -config simple_taskman.ecf -target simple_taskman_measure
+#   /d/prod/ec.sh check -config simple_taskman.ecf -target simple_taskman
+#   /d/prod/ec.sh check -config simple_taskman.ecf -target simple_taskman_tests
+#   /d/prod/ec.sh test  -config simple_taskman.ecf -target simple_taskman_tests   (clean EIFGENs)
+#   ./EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe
+
+## Scope
+
+Phase 1 covers the 41 library classes the spec tags P1 (model, probe, sampling,
+handoff, facade) plus one class added here (TM_SELF_PROCESS, below): 42 classes.
+P2 (recorder) and P3 (diagnosis) classes are specified only at signature level
+in spec 07, so their contracts are written when those product phases start,
+not invented now. Application targets (taskman, taskman_cli, taskman_stress,
+taskman_recorder) are added to the ECF when their root classes exist.
+
+  src/model ............ 19    src/probe ........ 12 (+2 in probe/scripted)
+  src/sampling .........  4    src/handoff ......  4    src (facade) ... 1
+  testing .............. 14 (TEST_APP, TM_TEST_SET, LIB_TESTS, 11 test sets)
+
+## Body rule used in Phase 1 (stated so Phase 4 knows what is frozen)
+
+Written now: constants; storage and lookup (tables, lists, setters,
+creation procedures that store arguments); queries that preconditions or
+postconditions call (so a stub cannot block every caller); bodies spec 07
+prints in full (TM_READING, TM_SYSTEM_CLOCK, TM_FRAME_SLOT,
+TM_SAMPLING_WORKER, SIMPLE_TASKMAN, TM_FORMAT.reading_text); and the two
+scripted sources, which are test infrastructure.
+
+Stubbed until Phase 4 (each marked "-- Phase 4:" in the body): rate rules
+(make_from_pair, make_decoded checks), frame building, sampling, window
+aggregation and ranking, series ring writes, top_by, the codec, the budget
+policy, number formatting, heatmap shape, native read and layout self-check,
+documented read, PDH (open, add, collect, values, close), support probing,
+topology read, replay loop.
+
+## Compile output (final, after clean EIFGENs)
+
+=== TEST MODE (finalize -keep) ===
+Running: ec.exe -batch -config simple_taskman.ecf -target simple_taskman_tests -finalize -keep -c_compile
+Eiffel Compilation Manager
+Version 25.02.9.8732 - win64
+Degree 6: Examining System
+Degree 5: Parsing Classes
+Degree 4: Analyzing Inheritance
+Degree 3: Checking Types
+Degree 2: Generating Byte Code
+Degree -2: Constructing Polymorphic Table
+Degree -3: Generating Optimized Code
+System Recompiled.
+Preparing C compilation using Microsoft Visual Studio 2022 VC++ (17.0)...
+[... C files ...]
+C compilation completed
+✓ Built: EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe (1s ago)
+
+grep of the full log for "Error code|Warning code|warning C|error C": no matches.
+Zero Eiffel warnings, zero C warnings. pdh.lib on the link line.
+
+Measurement-only target (intent Q7: model + probe + sampling with nothing
+from handoff, facade, or UI), clean EIFGENs:
+Degree 6 .. Degree 2, System Recompiled.  (no errors, no warnings)
+
+## Test run (F_code, contracts kept)
+
+Results: 61 passed, 38 failed
+
+All 38 failures are Phase 4 stubs; each fails on the contract or assertion
+that names the missing behaviour:
+  activity rates (4) ......... cpu_rate_when_valid, cpu_invalid_when_impossible, cpu_reason_kept
+  frame builder / top_by (6) . every_current_process, self_cost_recorded
+  sampler (5) + facade (2) ... snapshot_taken
+  window aggregate (3) ....... coverage / value assertions
+  series (2) ................. bounded
+  codec (4) .................. decodable, "decoded", "line 1"
+  self-budget (4) ............ share_recorded
+  format (3) ................. not_empty
+  heatmap (1) ................ positive
+  live probe (5) ............. native trusted, native read, documented read,
+                               package power available / temperature not
+                               supported, processor count 32 (stub says 1)
+
+The 61 passing tests cover the implemented parts and the contracts that must
+fire now (value of a missing reading, set-once groups, sealed readings,
+instance rule, out-of-order frames, backward frames, bad intervals, unsafe log
+names, empty slot frames), plus the SCOOP consumer gate: a separate
+TM_FRAME_SLOT reached through separate arguments, and separate
+TM_SAMPLING_WORKER and TM_FRAME_FILE_REPLAYER created and attached.
+
+## SCOOP consumer gate
+
+ECF: concurrency support="scoop" use="scoop" on every target.
+TEST_SLOT.test_slot_on_its_own_processor ............ PASS
+TEST_SLOT.test_worker_and_replayer_are_creatable_separately ... PASS
+No VUAR errors.
+
+## ECF Dependency Audit
+
+- ISE allowed: base, testing (no time; time labels come later via simple_datetime in the GUI target)
+- simple_* used: simple_mml, simple_env (measure); simple_logger (library); simple_testing (tests)
+- Violations: none
+- Gaps identified (unchanged from intent): process table, PDH counters,
+  topology, clocks (possible simple_sysmon); single-instance mutex; known-folder helper
+
+## Defects found and fixed during this phase
+
+1. ECF: clusters declared in an EXTENDING target do not inherit the parent
+   target's <option> assertions. handoff, facade, and the test cluster first
+   ran with every contract unmonitored (TEST_SLOT.empty_frame_refused failed;
+   the codec's `decodable' postcondition never fired). Two-target repro in the
+   scratchpad confirmed it; fix: repeat <option> in each extending target.
+   Recorded as oracle gotcha "Extending ECF target drops assertions".
+2. VWOE: `m |=| (old m) & x' parses as `(m |=| old m) & x'. Parenthesized.
+   Oracle gotcha "MML free-operator precedence".
+3. VD00: library "testing" and cluster "testing" clash; cluster renamed "tests".
+4. ec.sh check printed "Syntax and type check passed" over a VWOE error, and an
+   incremental check skipped 14 new files after Degree 6. Oracle gotchas
+   recorded; every gate above was run from clean EIFGENs and read for
+   "Error code".
+
+## Deviations from spec 07 (for /eiffel.review)
+
+- TM_SELF_PROCESS (new, probe): the facade's pid and creation-time externals
+  moved here; probe stays the only cluster with externals.
+- Clusters are explicit (model, probe, sampling, handoff, facade) instead of
+  one recursive src, so simple_taskman_measure can prove the Q7 layering.
+- Attribute "require" clauses (user_ticks etc.) are functions over private
+  storage; handles belong to the memory group.
+- TM_PROCESS_ACTIVITY.make_from_pair contracts are stronger than 05: exact
+  CPU and IO rates, invalid when impossible or backward, worse_of reason kept.
+- TM_SYSTEM_SOURCE gains support_reason, supported_codes, logical_processors;
+  TM_PROCESS_SOURCE gains is_native, samples_model, has_idle_entry.
+- TM_FRAME_CODEC: create make (not default_create); decode_capabilities is a
+  command with last_capabilities (CQS), plus frame_texts_in for replay files.
+- TM_FRAME_SLOT.put_frame: 05's `copy_owned: frame_text.same_string (a_text)'
+  cannot compile against a separate argument; replaced by `copied: count equal'.
+- TM_SAMPLING_WORKER caps the budget maximum at 60 000 ms so
+  set_nominal_interval's precondition always holds.
+- TM_SELF_BUDGET contracts reworded so streak reset after back-off does not
+  make `backs_off' vacuous; Under_limit = 30 added.
+- TM_CPU_TOPOLOGY gains make_from_groups, flat_index, heatmap_rows/columns (R-4).
+- Status constant 0xC0000004 written as its signed value (-1073741820).
+
+# Status: PASS

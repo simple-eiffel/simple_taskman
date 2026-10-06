@@ -1,0 +1,46 @@
+# Pre-Phase Research Evidence
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-03 14:5x local
+
+Research completed: yes
+Steps completed: 7/7
+Recommendation: BUILD
+Confidence: HIGH (Phases 1-3: measure, record, diagnose)
+            MEDIUM (responsiveness probe and proof-by-intervention)
+
+References cited: 27 URLs total
+  fetched and read with WebFetch: 15
+  search hits recorded as leads, not opened: 12
+Alternatives researched: 9
+  TMOG, Windows Task Manager + Resource Monitor, Process Lasso (ProBalance),
+  System Informer, Process Explorer, LibreHardwareMonitor/PawnIO,
+  sysinfo (Rust), Windows SRUM, Microsoft User Input Delay counters
+Risks identified: 17
+Decisions recorded: 20
+Functional requirements: 42   Non-functional: 13   Constraints: 10
+Assumptions: 10 (3 validated, 2 partly/half validated, 3 falsified, 2 open)
+
+Local evidence (actual command output):
+  evidence/hardware-probe-2026-10-03.txt
+    - sensor/counter availability as standard user
+    - energy counter unit verification by arithmetic
+    - SPIKE 1: native process table cost + layout self-check
+    - SPIKE 2: WM_NULL round trip to 12 windows
+    - SPIKE 3: Sleep overshoot baseline
+
+Not done / limits of this research:
+  - No Eiffel code written or compiled (research phase only)
+  - Lag probe not tested under load, nor against an elevated window
+  - IO-counter and memory offsets in the native table not yet self-checked
+  - Recorder size is an estimate, not a measurement
+  - Hybrid cores, battery, temperature untestable on this machine
+  - Search-hit URLs were not opened; they are leads only
+
+# Status: COMPLETE
+
+# UPDATE 2026-10-03 (same day): Larry's answers recorded
+#   GUI first (D-013 reversed), audience = personal then published simple_*
+#   showcase (D-016), treebiz sidetracked until week of 2026-10-05.
+#   Elevation: explained, option 3 recommended (D-017), awaiting confirmation.
+#   Phases in 07-RECOMMENDATION.md reordered. Elevation probe appended to
+#   hardware-probe-2026-10-03.txt.

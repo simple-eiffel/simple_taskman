@@ -1,0 +1,55 @@
+# Phase 5 Coverage Evidence
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-05
+
+Method: scratchpad script coverage_map.py lists every feature declared under a
+public feature clause in src/ and whether any test file names it. Calls made
+inside monitored postconditions or bodies also run, so "not named" is an
+upper bound on untested code, not a measure of it.
+
+Before Phase 5: 366 public features, 257 named by a test, 109 not named.
+After Phase 5:  366 public features, 344 named by a test, 22 not named.
+Tests: 121 -> 161 (40 added in 4 new classes plus one acceptance test).
+
+Added:
+  TEST_COVERAGE_MODEL (18): metric bounds exactly at min and max, registry
+    lookups, value_text for every unit kind, half-away-from-zero rounding,
+    terabyte cap, sample groups, amount_of for each resource, decoded
+    newcomer with a rate (issue 13), self_activity and counts, top_by asking
+    for more than exist, ring wrapping ten times with a gap, zero capacity,
+    contains_span and empty window, per-instance aggregate, includes,
+    capabilities by hand, sampler previous snapshot, budget streak reset (issue 12)
+  TEST_COVERAGE_PROBE (10): self-check decides once, source kinds, native-like
+    script must list idle, duplicate identities break read_all's contract,
+    scripted support reasons and codes, the Windows source explains every
+    refusal (machine-neutral), uncapped PDH counter, topology accessors and
+    bounds, plain names and folders, slot capability and failure texts
+  TEST_CODEC_ROBUSTNESS (10): nine garbage inputs never raise and never yield
+    a frame, wrong field count names line 3, negative field refused (issue 11),
+    repeated identity, idle activity, unknown metric and wrong instance form,
+    bad escape, discontinuity carrying processes, valid fixtures decode,
+    capability errors kept separate from frame errors (issue 16)
+  TEST_WORKER (1): the SCOOP handoff end to end on this machine: worker on its
+    own processor samples live at 250 ms, three frames deposited, one collected
+    and decoded, capabilities decoded (every metric), stop requested, worker
+    reports stopped, no failure
+  TEST_ACCEPTANCE (+1): live facade uses the native table, self-check passed
+
+The 22 still not named, and why each is exercised anyway:
+  Contract support called by monitored bodies and postconditions on every
+  relevant test: TM_PROCESS_ACTIVITY.both_cpu, both_io, pair_cores,
+  is_possible_cores, is_possible_bps, is_possible_rate;
+  TM_FRAME_BUILDER.idle_count, new_count, exited_count; TM_WINDOW.coverage_of.
+  Read by bodies or the encoder: TM_PROCESS_ACTIVITY.io_write_bps (encode,
+  amount_of), TM_PROCESS_ID.creation_ticks (encode, hash_code, is_equal),
+  TM_SAMPLER.nominal_interval (facade nominal_interval_ticks, tested),
+  TM_SAMPLER.process_source and system_source (sample body),
+  TM_SELF_BUDGET.cpu_bound_pct and minimum_ms (assess body, invariant).
+  Worker-side, checked by the worker's own postcondition on its processor:
+  TM_SAMPLING_WORKER.stop_reported and TM_FRAME_FILE_REPLAYER.stop_reported
+  (slot_told), TM_FRAME_FILE_REPLAYER.frames_sent (seen as slot.deposited).
+  Phase 2 placeholder: TM_SAMPLING_WORKER.store_path (no recording yet).
+  Small-collection model kept for tests that may need it:
+  TM_PROCESS_SOURCE.samples_model (has_sample is used instead; review issue 1).
+
+# Status: PASS

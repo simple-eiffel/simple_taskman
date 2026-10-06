@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-23-0 http://www.eiffel.com/developers/xml/configuration-1-23-0.xsd" name="simple_taskman" uuid="D24B627B-4312-4089-9D10-618DA8479028" library_target="simple_taskman">
+	<description>Diagnostic task manager for Windows: honest measurement, a recorder, and a rule engine that names the cause</description>
+
+	<!-- Measurement layer only: model, probe, sampling. Compiling this target
+	     on its own proves those clusters need nothing from handoff, the
+	     facade, the recorder, or any user interface (intent Q7). -->
+	<target name="simple_taskman_measure">
+		<root all_classes="true"/>
+		<file_rule>
+			<exclude>/EIFGENs$</exclude>
+			<exclude>/\..*$</exclude>
+		</file_rule>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<setting name="dead_code_removal" value="feature"/>
+		<capability>
+			<concurrency support="scoop" use="scoop"/>
+			<void_safety support="all"/>
+		</capability>
+		<external_linker_flag value="pdh.lib">
+			<condition>
+				<platform value="windows"/>
+			</condition>
+		</external_linker_flag>
+		<!-- ISE compiles C with -D_WIN32_WINNT=0x0500 (Windows 2000) and -w, which hides
+		     every newer struct and silently accepts newer functions undeclared. A later
+		     definition wins (verified 2026-10-05), so the C sees the Windows 10 SDK API. -->
+		<external_cflag value="-D_WIN32_WINNT=0x0A00 -DWINVER=0x0A00">
+			<condition>
+				<platform value="windows"/>
+			</condition>
+		</external_cflag>
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf"/>
+		<library name="simple_mml" location="$SIMPLE_EIFFEL/simple_mml/simple_mml.ecf"/>
+		<library name="simple_env" location="$SIMPLE_EIFFEL/simple_env/simple_env.ecf"/>
+		<cluster name="model" location=".\src\model\"/>
+		<cluster name="probe" location=".\src\probe\" recursive="true"/>
+		<cluster name="sampling" location=".\src\sampling\"/>
+	</target>
+
+	<!-- The library: measurement plus the SCOOP handoff and the facade. -->
+	<target name="simple_taskman" extends="simple_taskman_measure">
+		<!-- Repeated on purpose: clusters declared in an extending target do NOT
+		     inherit the parent target's assertion options (verified 2026-10-05). -->
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<library name="simple_logger" location="$SIMPLE_EIFFEL/simple_logger/simple_logger.ecf"/>
+		<cluster name="handoff" location=".\src\handoff\"/>
+		<cluster name="facade" location=".\src\"/>
+	</target>
+
+	<!-- Test runner. Console, so results land on stdout. Both testing
+	     libraries per ecosystem standard: ISE testing for EQA, simple_testing
+	     for TEST_SET_BASE. -->
+	<target name="simple_taskman_tests" extends="simple_taskman">
+		<root class="TEST_APP" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<!-- Repeated on purpose: clusters declared in an extending target do NOT
+		     inherit the parent target's assertion options (verified 2026-10-05). -->
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
+		<library name="simple_testing" location="$SIMPLE_EIFFEL\simple_testing\simple_testing.ecf"/>
+		<library name="simple_cli" location="$SIMPLE_EIFFEL/simple_cli/simple_cli.ecf"/>
+		<cluster name="tests" location=".\testing\" recursive="true"/>
+		<cluster name="cli" location=".\cli\"/>
+		<cluster name="stress" location=".\stress\"/>
+	</target>
+
+	<!-- Headless front end: snapshot, capabilities, frames for replay. -->
+	<target name="taskman_cli" extends="simple_taskman">
+		<root class="TM_CLI" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<library name="simple_cli" location="$SIMPLE_EIFFEL/simple_cli/simple_cli.ecf"/>
+		<cluster name="cli" location=".\cli\"/>
+	</target>
+
+	<!-- Known loads for the diagnosis acceptance runs; disk mode is its own inline C (R-8). -->
+	<target name="taskman_stress" extends="simple_taskman">
+		<root class="TM_STRESS" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<library name="simple_cli" location="$SIMPLE_EIFFEL/simple_cli/simple_cli.ecf"/>
+		<cluster name="stress" location=".\stress\"/>
+	</target>
+
+	<!-- The window. Not a console application: a GUI-subsystem program that
+	     writes to the console gets a console window. Ship cairo.dll beside the
+	     exe; every finalize wipes F_code, so copy it back after building. -->
+	<target name="taskman" extends="simple_taskman">
+		<root class="TM_APP" feature="make"/>
+		<setting name="console_application" value="false"/>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<library name="simple_shell" location="$SIMPLE_EIFFEL/simple_shell/simple_shell.ecf"/>
+		<library name="simple_cairo" location="$SIMPLE_EIFFEL/simple_cairo/simple_cairo.ecf"/>
+		<library name="simple_widgets" location="$SIMPLE_EIFFEL/simple_widgets/simple_widgets.ecf">
+			<option warning="none"/>
+		</library>
+		<cluster name="app" location=".\app\"/>
+	</target>
+
+	<!-- The Phase 2 recorder (taskman_recorder) is added when its root class exists. -->
+</system>
