@@ -133,18 +133,31 @@ feature -- Status report
 			Result := a_tier >= 0 and a_tier < Tier_count
 		end
 
-	is_significant (a_activity: TM_PROCESS_ACTIVITY): BOOLEAN
-			-- Is `a_activity' worth recording: just born, or above a threshold in any resource?
+	is_significant (a_activity: TM_PROCESS_ACTIVITY; a_memory_pass: BOOLEAN): BOOLEAN
+			-- Is `a_activity' worth recording: just born, busy in CPU or disk, or, in a memory pass,
+			-- holding at least `private_bytes_threshold'? (Large quiet processes barely change from
+			-- second to second; recording them once per tier 1 bucket keeps their history at the
+			-- resolution tier 1 keeps anyway, at a tenth of the cost: measured 2026-10-06, 12.6 of 23
+			-- recorded processes a frame were large and quiet.)
 		do
 			Result := a_activity.is_new
 				or else (a_activity.has_resource ({TM_RESOURCE}.Cpu) and then a_activity.cpu_cores >= cpu_cores_threshold)
 				or else (a_activity.has_resource ({TM_RESOURCE}.Io_total) and then a_activity.amount_of ({TM_RESOURCE}.Io_total) >= io_bps_threshold)
-				or else (a_activity.has_resource ({TM_RESOURCE}.Memory) and then a_activity.private_bytes >= private_bytes_threshold)
+				or else (a_memory_pass and then a_activity.has_resource ({TM_RESOURCE}.Memory) and then a_activity.private_bytes >= private_bytes_threshold)
 		ensure
 			definition: Result = (a_activity.is_new
 				or (a_activity.has_resource ({TM_RESOURCE}.Cpu) and then a_activity.cpu_cores >= cpu_cores_threshold)
 				or (a_activity.has_resource ({TM_RESOURCE}.Io_total) and then a_activity.amount_of ({TM_RESOURCE}.Io_total) >= io_bps_threshold)
-				or (a_activity.has_resource ({TM_RESOURCE}.Memory) and then a_activity.private_bytes >= private_bytes_threshold))
+				or (a_memory_pass and then a_activity.has_resource ({TM_RESOURCE}.Memory) and then a_activity.private_bytes >= private_bytes_threshold))
+		end
+
+	is_memory_pass (a_frame: TM_FRAME): BOOLEAN
+			-- Does `a_frame' reach a tier 1 bucket boundary (end inclusive), so large quiet processes are recorded in it?
+			-- Consecutive frames reach each boundary exactly once; a frame of a coarser tier always does.
+		require
+			not_before_epoch: a_frame.start_ticks >= 0
+		do
+			Result := bucket_of (a_frame.start_ticks, 1) /= bucket_of (a_frame.end_ticks, 1)
 		end
 
 feature {NONE} -- Implementation

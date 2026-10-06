@@ -48,14 +48,18 @@ feature -- Basic operations
 
 	reduced (a_frame: TM_FRAME): TM_FRAME
 			-- `a_frame' with its readings and only its significant processes.
+		require
+			not_before_epoch: a_frame.start_ticks >= 0
 		local
 			l_candidates, l_kept: ARRAYED_LIST [TM_PROCESS_ACTIVITY]
 			l_kept_ids: HASH_TABLE [BOOLEAN, TM_PROCESS_ID]
 			l_born: ARRAYED_LIST [TM_PROCESS_ID]
+			l_memory_pass: BOOLEAN
 		do
 			create l_candidates.make (a_frame.activity_count)
+			l_memory_pass := policy.is_memory_pass (a_frame)
 			across a_frame.activities as ic loop
-				if policy.is_significant (ic) then
+				if policy.is_significant (ic, l_memory_pass) then
 					l_candidates.extend (ic)
 				end
 			end
@@ -82,7 +86,7 @@ feature -- Basic operations
 			same_processors: Result.logical_processors = a_frame.logical_processors
 			readings_shared: Result.readings = a_frame.readings
 			bounded: Result.activity_count <= policy.max_processes
-			only_significant: across Result.activities as ic all policy.is_significant (ic) end
+			only_significant: across Result.activities as ic all policy.is_significant (ic, policy.is_memory_pass (a_frame)) end
 			from_frame: across Result.activities as ic all a_frame.has_activity (ic.id) end
 			omitted_counted: Result.omitted_processes = a_frame.omitted_processes + a_frame.activity_count - Result.activity_count
 			exits_kept: Result.exited.count = a_frame.exited.count

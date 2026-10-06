@@ -35,11 +35,12 @@ feature -- Tests: policy
 			l_policy: TM_RETENTION_POLICY
 		do
 			create l_policy.make_default
-			assert_true ("busy", l_policy.is_significant (activity (10, 0.5, 10, 0.0)))
-			assert_true ("big", l_policy.is_significant (activity (11, 0.0, 300, 0.0)))
-			assert_true ("disk", l_policy.is_significant (activity (12, 0.0, 10, 500_000.0)))
-			assert_true ("born", l_policy.is_significant (newborn (13)))
-			assert_false ("quiet", l_policy.is_significant (activity (14, 0.001, 10, 10.0)))
+			assert_true ("busy", l_policy.is_significant (activity (10, 0.5, 10, 0.0), False))
+			assert_true ("big, memory pass", l_policy.is_significant (activity (11, 0.0, 300, 0.0), True))
+			assert_false ("big and quiet between passes", l_policy.is_significant (activity (11, 0.0, 300, 0.0), False))
+			assert_true ("disk", l_policy.is_significant (activity (12, 0.0, 10, 500_000.0), False))
+			assert_true ("born", l_policy.is_significant (newborn (13), False))
+			assert_false ("quiet", l_policy.is_significant (activity (14, 0.001, 10, 10.0), True))
 		end
 
 	test_policy_buckets
@@ -58,13 +59,26 @@ feature -- Tests: merger
 		local
 			l_frame, l_reduced: TM_FRAME
 		do
-			l_frame := frame_with (T0, 1, <<activity (1, 0.5, 10, 0.0), activity (2, 0.0, 10, 0.0), activity (3, 0.0, 400, 0.0)>>, 20.0)
+			l_frame := frame_with (T0 + 9 * One_second, 1, <<activity (1, 0.5, 10, 0.0), activity (2, 0.0, 10, 0.0), activity (3, 0.0, 400, 0.0)>>, 20.0)
 			l_reduced := merger.reduced (l_frame)
+			assert_true ("reaches the 10 s boundary", merger.policy.is_memory_pass (l_frame))
 			assert_integers_equal ("two kept", 2, l_reduced.activity_count)
 			assert_true ("busy kept", l_reduced.has_activity (id (1, 1001)))
 			assert_true ("big kept", l_reduced.has_activity (id (3, 1003)))
 			assert_integers_equal ("one omitted", 1, l_reduced.omitted_processes)
 			assert_true ("readings shared", l_reduced.readings = l_frame.readings)
+		end
+
+	test_reduce_skips_large_quiet_between_passes
+		local
+			l_frame, l_reduced: TM_FRAME
+		do
+			l_frame := frame_with (T0, 1, <<activity (1, 0.5, 10, 0.0), activity (3, 0.0, 400, 0.0)>>, 20.0)
+			assert_false ("inside a bucket", merger.policy.is_memory_pass (l_frame))
+			l_reduced := merger.reduced (l_frame)
+			assert_true ("busy kept", l_reduced.has_activity (id (1, 1001)))
+			assert_false ("large quiet left for the pass", l_reduced.has_activity (id (3, 1003)))
+			assert_integers_equal ("counted as omitted", 1, l_reduced.omitted_processes)
 		end
 
 	test_reduce_caps_and_counts_omitted
@@ -98,7 +112,7 @@ feature -- Tests: merger
 			end
 			l_list.extend (activity (101, 0.0, 10, 50_000_000.0))
 			l_list.extend (activity (102, 0.0, 9_000, 0.0))
-			l_frame := frame_from_list (T0, 1, l_list, 50.0)
+			l_frame := frame_from_list (T0 + 9 * One_second, 1, l_list, 50.0)
 			l_reduced := merger.reduced (l_frame)
 			assert_true ("top disk kept", l_reduced.has_activity (id (101, 1101)))
 			assert_true ("top memory kept", l_reduced.has_activity (id (102, 1102)))
@@ -452,7 +466,7 @@ feature -- Tests: SQLite store
 			create l_store.make_writer (l_path, small_policy)
 			l_store.close
 			create l_db.make (l_path)
-			l_db.perform ("INSERT INTO frames (start_ticks, end_ticks, duration_ticks, tier, discontinuity, process_count, omitted_processes, cpu_busy_pct, cpu_busy_status, mem_commit_status, disk_busy_status, package_watts_status, lag_status, payload) VALUES (1, 2, 1, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 1, 'x')")
+			l_db.perform ("INSERT INTO frames (start_ticks, end_ticks, duration_ticks, tier, discontinuity, process_count, omitted_processes, cpu_busy_pct, cpu_busy_status, mem_commit_status, disk_busy_status, package_watts_status, lag_status, payload) VALUES (1, 2, 1, 0, 0, 0, 0, NULL, 0, 1, 1, 1, 1, X'00')")
 			assert_true ("CHECK refused available-without-value", l_db.has_error)
 			l_db.close
 			delete_trace (l_path)
@@ -517,6 +531,39 @@ feature -- Tests: recording through the facade
 			assert_integers_equal ("not recorded", 1, l_store.frame_count)
 			assert_integers_equal ("counted as skipped", 1, l_tm.skipped_out_of_order)
 			l_tm.close
+		end
+
+feature -- Tests: trace command
+
+	test_trace_command_describes_a_recording
+		note
+			testing: "covers/{TM_TRACE_COMMAND}.execute"
+		local
+			l_path: STRING_32
+			l_store: TM_SQLITE_TRACE_STORE
+			l_command: TM_TRACE_COMMAND
+		do
+			l_path := fresh_trace ("taskman_trace_cli.db")
+			create l_store.make_writer (l_path, small_policy)
+			l_store.append (merger.reduced (frame_with (T0, 1, <<named_activity (9, {STRING_32} "busy.exe")>>, 10.0)))
+			fill_from (l_store, T0 + One_second, 4)
+			l_store.close
+			create l_command.make (l_path, 5, 5)
+			l_command.execute
+			assert_integers_equal ("exit 0", 0, l_command.exit_code)
+			assert_string_contains ("counts tiers", l_command.output, "frames     5 (1 s: 5")
+			assert_string_contains ("oldest moment shows its process", l_command.output, "busy.exe")
+			delete_trace (l_path)
+		end
+
+	test_trace_command_without_a_recording_exits_3
+		local
+			l_command: TM_TRACE_COMMAND
+		do
+			create l_command.make (scratch_path ({STRING_32} "taskman_no_such_trace.db"), 0, 5)
+			l_command.execute
+			assert_integers_equal ("exit 3", 3, l_command.exit_code)
+			assert_string_contains ("says why", l_command.output, "no recording")
 		end
 
 feature -- Tests: single writer

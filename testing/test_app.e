@@ -411,6 +411,7 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_policy_significance, "policy_significance")
 			run_test (agent t.test_policy_buckets, "policy_buckets")
 			run_test (agent t.test_reduce_keeps_significant_only, "reduce_keeps_significant_only")
+			run_test (agent t.test_reduce_skips_large_quiet_between_passes, "reduce_skips_large_quiet_between_passes")
 			run_test (agent t.test_reduce_caps_and_counts_omitted, "reduce_caps_and_counts_omitted")
 			run_test (agent t.test_reduce_picks_from_each_ranking, "reduce_picks_from_each_ranking")
 			run_test (agent t.test_merge_weighted_mean, "merge_weighted_mean")
@@ -436,6 +437,8 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_sqlite_reader_of_missing_file_says_why, "sqlite_reader_of_missing_file_says_why")
 			run_test (agent t.test_facade_records_each_new_frame, "facade_records_each_new_frame")
 			run_test (agent t.test_facade_skips_frames_out_of_order, "facade_skips_frames_out_of_order")
+			run_test (agent t.test_trace_command_describes_a_recording, "trace_command_describes_a_recording")
+			run_test (agent t.test_trace_command_without_a_recording_exits_3, "trace_command_without_a_recording_exits_3")
 			run_test (agent t.test_single_writer_second_is_refused, "single_writer_second_is_refused")
 			run_test (agent t.test_single_writer_release_lets_the_next_in, "single_writer_release_lets_the_next_in")
 		end

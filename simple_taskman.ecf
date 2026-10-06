@@ -49,6 +49,10 @@
 		</option>
 		<library name="simple_logger" location="$SIMPLE_EIFFEL/simple_logger/simple_logger.ecf"/>
 		<library name="simple_sql" location="$SIMPLE_EIFFEL/simple_sql/simple_sql.ecf"/>
+		<library name="simple_compression" location="$SIMPLE_EIFFEL/simple_compression/simple_compression.ecf">
+			<!-- Its ISE zlib layer makes an obsolete call (reported 2026-10-06; upstream item). -->
+			<option warning="none"/>
+		</library>
 		<cluster name="handoff" location=".\src\handoff\"/>
 		<cluster name="recorder" location=".\src\recorder\"/>
 		<cluster name="facade" location=".\src\"/>

@@ -6,7 +6,16 @@ note
 		(batched commits, NFR-004); its own queries see the frames not yet
 		committed. Other processes open the file with `make_reader' and see
 		committed frames (WAL mode). The CHECK pairs in the schema keep a fake
-		zero out of the file, whoever writes it (DR-001).
+		zero out of the file, whoever writes it (DR-001). The payload is the
+		frame's TMF1 text compressed with zlib (meta payload_encoding = zlib):
+		measured 2026-10-06, 4.5 KB of text became 1.5 KB.
+
+		The processes table holds rows for tier 1 and 2 frames only, so
+		per-process SQL covers everything older than an hour, while the
+		1-second frames keep their processes in the payload alone. Measured
+		2026-10-06 on JACKJACK: with rows for every frame and a commit every
+		10 frames the recorder wrote 50 MB an hour, two and a half times the
+		NFR-004 budget; most of it was index pages rewritten at each commit.
 
 		Retention works on the store's own timeline (`latest_ticks', which
 		only grows), so frames of a coarser tier never sit among the
@@ -39,6 +48,7 @@ feature {NONE} -- Initialization
 			policy := a_policy
 			create last_error.make_empty
 			create codec.make
+			create compressor.make
 			create merger.make (a_policy)
 			create planner.make (a_policy)
 			ensure_folder
@@ -72,6 +82,7 @@ feature {NONE} -- Initialization
 			create policy.make_default
 			create last_error.make_empty
 			create codec.make
+			create compressor.make
 			create merger.make (policy)
 			create planner.make (policy)
 			if not file_exists then
@@ -186,8 +197,8 @@ feature -- Access
 
 	Schema_version: INTEGER = 1
 
-	Commit_every: INTEGER = 10
-			-- Frames appended between automatic commits.
+	Commit_every: INTEGER = 30
+			-- Frames appended between automatic commits (a reader lags at most this many frames).
 
 feature -- Element change
 
@@ -280,6 +291,7 @@ feature {NONE} -- Database
 			-- The connection while open.
 
 	codec: TM_FRAME_CODEC
+	compressor: SIMPLE_COMPRESSION
 	merger: TM_FRAME_MERGER
 	planner: TM_RETENTION_PLANNER
 
@@ -382,7 +394,7 @@ feature {NONE} -- Database
 				   disk_busy_max_pct REAL, disk_busy_status INTEGER NOT NULL,
 				   package_watts REAL, package_watts_status INTEGER NOT NULL,
 				   lag_max_ms REAL, lag_status INTEGER NOT NULL,
-				   payload TEXT NOT NULL,
+				   payload BLOB NOT NULL,
 				   CHECK ((cpu_busy_status = 0) = (cpu_busy_pct IS NOT NULL)),
 				   CHECK ((mem_commit_status = 0) = (mem_commit_pct IS NOT NULL)),
 				   CHECK ((disk_busy_status = 0) = (disk_busy_max_pct IS NOT NULL)),
@@ -403,6 +415,7 @@ feature {NONE} -- Database
 			exec ("CREATE INDEX processes_by_identity ON processes (pid, creation_ticks)")
 			exec ("INSERT INTO meta (key, value) VALUES ('schema_version', '" + Schema_version.out + "')")
 			exec ("INSERT INTO meta (key, value) VALUES ('codec_version', 'TMF1')")
+			exec ("INSERT INTO meta (key, value) VALUES ('payload_encoding', 'zlib')")
 		end
 
 	load_span
@@ -555,10 +568,10 @@ feature {NONE} -- Frames
 			append_headline (l_sql, busiest_disk (a_frame.readings))
 			append_headline (l_sql, a_frame.readings.reading ({TM_METRICS}.Cpu_package_watts, {STRING_32} ""))
 			append_headline (l_sql, a_frame.readings.reading ({TM_METRICS}.Lag_max_ms, {STRING_32} ""))
-			l_sql.append (quoted (codec.encode (a_frame)))
+			l_sql.append (hex_literal (compressor.compress_string (codec.encode (a_frame))))
 			l_sql.append (")")
 			exec (l_sql)
-			if last_error.is_empty then
+			if last_error.is_empty and a_tier >= 1 then
 				l_id := db.last_insert_rowid
 				across a_frame.activities as ic until not last_error.is_empty loop
 					exec (process_row (l_id, ic))
@@ -639,11 +652,50 @@ feature {NONE} -- Frames
 		end
 
 	payload_of (a_row: SIMPLE_SQL_ROW): STRING_8
-			-- The payload column as the codec's UTF-8 text.
+			-- The payload column inflated back to the codec's UTF-8 text; empty when it does not inflate.
 		local
-			l_utf: UTF_CONVERTER
+			l_bytes: STRING_8
+			i: INTEGER
 		do
-			Result := l_utf.string_32_to_utf_8_string_8 (a_row.string_value ("payload"))
+			create Result.make_empty
+			if attached a_row.blob_value ("payload") as al_blob then
+				create l_bytes.make (al_blob.count)
+				from i := 0 until i = al_blob.count loop
+					l_bytes.append_character (al_blob.read_natural_8 (i).to_character_8)
+					i := i + 1
+				end
+				if attached inflated (l_bytes) as al_text then
+					Result := al_text
+				end
+			end
+		end
+
+	inflated (a_bytes: STRING_8): detachable STRING_8
+			-- `a_bytes' decompressed; Void when they are not zlib data.
+		local
+			l_failed: BOOLEAN
+		do
+			if not l_failed and then not a_bytes.is_empty then
+				Result := compressor.decompress_string (a_bytes)
+			end
+		rescue
+			l_failed := True
+			retry
+		end
+
+	hex_literal (a_bytes: STRING_8): STRING_8
+			-- `a_bytes' as an SQL blob literal X'...'.
+		local
+			l_digits: STRING_8
+		do
+			l_digits := "0123456789ABCDEF"
+			create Result.make (a_bytes.count * 2 + 3)
+			Result.append ("X'")
+			across a_bytes as ic loop
+				Result.append_character (l_digits [ic.code // 16 + 1])
+				Result.append_character (l_digits [ic.code \\ 16 + 1])
+			end
+			Result.append_character ('%'')
 		end
 
 	decoded (a_text: STRING_8): detachable TM_FRAME

@@ -303,6 +303,10 @@ feature {NONE} -- History (Phase 2 DVR)
 						+ {STRING_32} ", " + al_reader.frame_count.out.to_string_32 + {STRING_32} " frames, "
 						+ format.bytes (al_reader.size_bytes)
 					scrub_view.set_span (al_reader.earliest_ticks, al_reader.latest_ticks, l_note)
+					if history_seconds > 0 and al_reader.latest_ticks > al_reader.earliest_ticks then
+						scrub_view.scrub_to (al_reader.latest_ticks - history_seconds.to_integer_64 * 10_000_000)
+						history_seconds := 0
+					end
 				end
 			end
 		end
@@ -486,6 +490,8 @@ feature {NONE} -- Arguments
 					i := i + 1
 				elseif argument (i).same_string ({STRING_32} "--no-record") then
 					no_record := True
+				elseif argument (i).same_string ({STRING_32} "--history") and i < argument_count and then argument (i + 1).is_integer then
+					history_seconds := argument (i + 1).to_integer.max (1)
 				elseif argument (i).same_string ({STRING_32} "--echo") and i < argument_count then
 					echo_path := argument (i + 1).twin
 					i := i + 1
@@ -551,6 +557,9 @@ feature {NONE} -- Implementation
 
 	no_record: BOOLEAN
 			-- `--no-record': sample without recording.
+
+	history_seconds: INTEGER
+			-- `--history N': open scrubbed back N seconds once the recording is readable; 0 for live.
 	started: INTEGER_64
 	tick_start: INTEGER_64
 	last_render: INTEGER
