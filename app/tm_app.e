@@ -42,7 +42,7 @@ feature {NONE} -- Initialization
 			create self.make
 			create soak.make
 			create theme.make_dark
-			create window.make ("simple_taskman 0.3.0", 80, 60, 1280, 820, theme)
+			create window.make ("simple_taskman 0.3.0", 80, 60, window_width, window_height, theme)
 			create process_view.make (self.id)
 			create core_view.make (machine_topology)
 			create cpu_tile.make ("CPU")
@@ -128,10 +128,12 @@ feature {NONE} -- Layout
 			l_side := l_side.with_gap (10.0)
 			l_side.put (core_view.heatmap)
 			l_side.put (side_tabs)
+			side_tabs.set_grow (1.0)
 			create l_main.make
 			l_main := l_main.with_gap (6.0)
 			l_main.put (actions_bar.toolbar)
 			l_main.put (process_view.grid)
+			process_view.grid.set_grow (1.0)
 			create l_split.make (l_main, l_side)
 			l_split.set_ratio (0.66)
 			l_split.set_grow (1.0)
@@ -1048,6 +1050,8 @@ feature {NONE} -- Arguments
 		do
 			create replay_path.make_empty
 			create echo_path.make_empty
+			window_width := 1280
+			window_height := 820
 			from i := 1 until i > argument_count loop
 				if argument (i).same_string ({STRING_32} "--replay") and i < argument_count then
 					replay_path := argument (i + 1).twin
@@ -1065,6 +1069,13 @@ feature {NONE} -- Arguments
 				elseif argument (i).same_string ({STRING_32} "--echo") and i < argument_count then
 					echo_path := argument (i + 1).twin
 					i := i + 1
+				elseif argument (i).same_string ({STRING_32} "--size") and i < argument_count
+						and then argument (i + 1).as_lower.split ('x').count = 2
+						and then argument (i + 1).as_lower.split ('x').first.is_integer
+						and then argument (i + 1).as_lower.split ('x').last.is_integer then
+					window_width := argument (i + 1).as_lower.split ('x').first.to_integer.max (900).min (7680)
+					window_height := argument (i + 1).as_lower.split ('x').last.to_integer.max (640).min (4320)
+					i := i + 1
 				elseif argument (i).same_string ({STRING_32} "--soak") and i < argument_count and then argument (i + 1).is_integer then
 					soak_seconds := argument (i + 1).to_integer.max (1).min (86_400)
 					i := i + 1
@@ -1072,6 +1083,9 @@ feature {NONE} -- Arguments
 				i := i + 1
 			end
 		end
+
+	window_width, window_height: INTEGER
+			-- Opening size of the window (`--size WxH'; 1280 by 820 by default).
 
 	machine_topology: TM_CPU_TOPOLOGY
 			-- This machine's processors; for a replay, the recording's processor count.

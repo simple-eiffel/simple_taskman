@@ -11,6 +11,7 @@
 - Installer: ships `taskman_recorder.exe`; stops the recorder before replacing it and restarts it after an upgrade; uninstall removes the Run value, and refuses while Ctrl+Shift+Esc still opens this copy.
 
 ### Fixed
+- The window fills the screen when it grows: the process, services, startup, and users grids, the side panel, and the performance chart take the extra height; each grid's main column (Name, Description, Where, User) takes the extra width. Toolbars, buttons, and switches keep their natural size. Column dividers show the left-right resize pointer (simple_widgets PR #13). `--size WxH` opens the window at a given size.
 - A 5.5 s window freeze: account names for the selected process were looked up on the window thread, which can wait on the network. Now a local-only lookup with a 64-entry cache; ticks over 500 ms are logged.
 
 ### Technical

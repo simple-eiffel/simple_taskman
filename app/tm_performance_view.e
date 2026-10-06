@@ -33,7 +33,8 @@ feature {NONE} -- Initialization
 			list := list.with_min_size (List_width, 0.0).with_max_size (List_width, 0.0)
 			list.set_row_height (54.0)
 			create chart.make
-			chart := chart.with_max_size (0.0, Chart_height)
+			chart := chart.with_min_size (0.0, Chart_height)
+			chart.set_grow (1.0)
 			create heading.make ("", {SW_PAINTER}.Role_ui, 20.0, True)
 			create fact_names.make (Fact_count)
 			create fact_values.make (Fact_count)
@@ -67,6 +68,7 @@ feature {NONE} -- Initialization
 			page := page.with_gap (12.0)
 			page.put (list)
 			page.put (detail)
+			page.set_cross_axis ({SW_ROW}.Cross_stretch)
 			list.set_row_renderer (agent draw_row)
 			list.set_on_select (agent on_select)
 			add_panel (create {TM_RESOURCE_PANEL}.make ({STRING_32} "cpu", {STRING_32} "CPU", <<{STRING_32} "Utility %%", {STRING_32} "Kernel %%">>))

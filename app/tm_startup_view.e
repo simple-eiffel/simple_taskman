@@ -22,11 +22,11 @@ feature {NONE} -- Initialization
 			create list.make
 			create rows.make (32)
 			create grid.make (a_height - 90.0)
-			grid.add_column ((create {SW_GRID_COLUMN [TM_STARTUP_ITEM]}.make ("Name", 220.0, agent {TM_STARTUP_ITEM}.name)).with_key (agent {TM_STARTUP_ITEM}.name_key))
+			grid.add_column ((create {SW_GRID_COLUMN [TM_STARTUP_ITEM]}.make ("Name", 220.0, agent {TM_STARTUP_ITEM}.name)).growing.with_key (agent {TM_STARTUP_ITEM}.name_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_STARTUP_ITEM]}.make ("Publisher", 200.0, agent {TM_STARTUP_ITEM}.publisher)).with_key (agent {TM_STARTUP_ITEM}.publisher_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_STARTUP_ITEM]}.make ("Status", 90.0, agent {TM_STARTUP_ITEM}.status_text)).with_key (agent {TM_STARTUP_ITEM}.status_text))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_STARTUP_ITEM]}.make ("Startup impact (measured)", 260.0, agent {TM_STARTUP_ITEM}.impact)).with_key (agent {TM_STARTUP_ITEM}.impact_key))
-			grid.add_column ((create {SW_GRID_COLUMN [TM_STARTUP_ITEM]}.make ("Where", 200.0, agent {TM_STARTUP_ITEM}.where)).with_key (agent {TM_STARTUP_ITEM}.where))
+			grid.add_column ((create {SW_GRID_COLUMN [TM_STARTUP_ITEM]}.make ("Where", 200.0, agent {TM_STARTUP_ITEM}.where)).growing.with_key (agent {TM_STARTUP_ITEM}.where))
 			grid.sort_by (1, False)
 			create toolbar.make
 			create detail.make_ui ("Startup impact is measured from the recording of the three minutes after Windows started; turn on Record from logon (Settings) to measure the next boot.")
@@ -34,6 +34,7 @@ feature {NONE} -- Initialization
 			column := column.with_gap (6.0)
 			column.put (toolbar)
 			column.put (grid)
+			grid.set_grow (1.0)
 			column.put (detail)
 			toolbar.add_tool ("Enable", "Start this app at logon", True, agent act (1))
 			toolbar.add_tool ("Disable", "Do not start this app at logon (it stays installed)", True, agent act (2))

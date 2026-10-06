@@ -67,7 +67,7 @@ every logon, so history exists from boot even when the window is closed.
 Start "simple_taskman (do not record)" from the Start menu to watch
 without recording.
 
-Options: --history SECONDS (open looking back), --no-record,
+Options: --history SECONDS (open looking back), --no-record, --size WxH,
 --select PID, --page NAME (processes, performance, services, startup,
 users, settings), --replay FILE. Settings live in
 %LOCALAPPDATA%\simple_taskman\settings.toml.

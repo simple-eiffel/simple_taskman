@@ -20,7 +20,7 @@ feature {NONE} -- Initialization
 			create rows.make (4)
 			create clock.make
 			create grid.make (a_height - 90.0)
-			grid.add_column ((create {SW_GRID_COLUMN [TM_SESSION]}.make ("User", 260.0, agent {TM_SESSION}.user_text)).with_key (agent {TM_SESSION}.user_text))
+			grid.add_column ((create {SW_GRID_COLUMN [TM_SESSION]}.make ("User", 260.0, agent {TM_SESSION}.user_text)).growing.with_key (agent {TM_SESSION}.user_text))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_SESSION]}.make ("Session", 80.0, agent {TM_SESSION}.id_text)).with_key (agent {TM_SESSION}.id))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_SESSION]}.make ("Status", 120.0, agent {TM_SESSION}.state_text)).with_key (agent {TM_SESSION}.state_text))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_SESSION]}.make ("Processes", 90.0, agent {TM_SESSION}.processes_text)).with_key (agent {TM_SESSION}.process_count))
@@ -33,6 +33,7 @@ feature {NONE} -- Initialization
 			column := column.with_gap (6.0)
 			column.put (toolbar)
 			column.put (grid)
+			grid.set_grow (1.0)
 			column.put (note_label)
 			toolbar.add_tool (Disconnect_label, "Disconnect the selected session (click twice)", True, agent act (1))
 			toolbar.add_tool (Sign_out_label, "Sign the selected user out (click twice)", True, agent act (2))

@@ -22,7 +22,7 @@ feature {NONE} -- Initialization
 			create rows.make (512)
 			create notice.make_empty
 			create grid.make (410.0)
-			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Name", 176.0, agent {TM_PROCESS_ROW}.name_text)).with_key (agent {TM_PROCESS_ROW}.name_key))
+			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Name", 176.0, agent {TM_PROCESS_ROW}.name_text)).growing.with_key (agent {TM_PROCESS_ROW}.name_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Status", 96.0, agent {TM_PROCESS_ROW}.status_text)).with_key (agent {TM_PROCESS_ROW}.status_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("PID", 62.0, agent {TM_PROCESS_ROW}.pid_text)).with_key (agent {TM_PROCESS_ROW}.pid_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("CPU", 66.0, agent {TM_PROCESS_ROW}.cpu_text)).with_key (agent {TM_PROCESS_ROW}.cpu_key))

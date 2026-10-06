@@ -236,7 +236,10 @@ feature -- Tests: live Windows sources (this machine)
 			create l_clock.make
 			l_query.add_english ("\Processor Information(_Total)\%% Processor Time").do_nothing
 			l_query.collect
-			l_clock.sleep_ms (100)
+				-- A second apart, as PDH asks: two collections too close
+				-- together can leave the rate without valid data (failed
+				-- once at 100 ms on 2026-10-06 while the machine was busy).
+			l_clock.sleep_ms (1000)
 			l_query.collect
 			l_values := l_query.values (1)
 			assert_integers_equal ("one instance", 1, l_values.count)
