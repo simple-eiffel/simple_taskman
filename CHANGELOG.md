@@ -13,5 +13,6 @@
 
 ### Technical
 - Design by Contract throughout; void-safe; SCOOP.
-- 182 tests at the last full run, including scale tests (5,000 processes, 1,024 logical processors, an hour of frames), hostile input, and SCOOP races.
+- 191 tests passing, including scale tests (5,000 processes, 1,024 logical processors, an hour of frames), hostile input, SCOOP races, and the application targets.
+- One-hour live soak of the window (lean build): sampling 0.74% of one processor, render 15.7 ms average, 0 frames dropped, memory 31-33 MB, handles and GDI objects constant.
 - Inline C on system headers only; `_WIN32_WINNT` raised to 0x0A00 in the ECF (EiffelStudio's default C target is Windows 2000).

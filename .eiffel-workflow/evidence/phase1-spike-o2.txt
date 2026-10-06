@@ -1,0 +1,108 @@
+# Spike O-2 and the Phase 1 product targets: evidence
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-05 (evening; the one-hour soak ran 21:45:12-22:45:13)
+# Machine: JACKJACK, Windows 11, 32 logical processors
+
+Larry paused /eiffel.ship and asked for spike O-2 and the taskman GUI, CLI,
+and stress targets first. All three targets exist, build clean, and were run
+live on this machine.
+
+## Targets
+
+taskman (window, app/: TM_APP, TM_PROCESS_VIEW, TM_PROCESS_ROW, TM_CORE_VIEW,
+  TM_TREND_VIEW, TM_CAPABILITY_VIEW, TM_SOAK_LOG)
+  - process grid (sort keys, selection follows identity, own row marked),
+    per-core heatmap shaped from the processor count, four trend tiles,
+    capability panel with reasons, status bar with own overhead
+  - --replay FILE, --soak SECONDS (log to %LOCALAPPDATA%\simple_taskman\logs\
+    taskman-gui.log via SIMPLE_LOGGER.make_to_file), --echo PNG (screenshots)
+taskman_cli: snapshot [--top --self --interval --save-frames --file],
+  capabilities, synthetic [--processes] (scripted replay files), clockwatch
+taskman_stress: cpu (N SCOOP spinners), memory (growth, every page touched),
+  disk (CreateFileW, no buffering, write-through, aligned 1 MB chunks)
+
+## Builds (clean, 2026-10-05 21:44)
+  ec.sh test    -target simple_taskman_tests : System Recompiled; Built; 0 problems
+  ec.sh release -target taskman              : lean + dbc built; 0 problems
+  ec.sh test    -target taskman_cli          : Built; 0 problems
+  ec.sh test    -target taskman_stress       : Built; 0 problems
+  ("problems" = grep for Error code | Syntax error | Warning code | warning C | error C | ERROR)
+
+## Tests (F_code, contracts kept), 21:43
+  Results: 191 passed, 0 failed - ALL TESTS PASSED
+  (182 from Phase 6 + 8 application-target tests + package-power acceptance)
+
+## One-hour live soak (lean build, no screenshot overhead)
+  summary: 3600 s, frames shown 3557, deposited 3557, dropped 0,
+    processes max 316, render avg 15.7 ms max 16 ms, tick avg 1.8 ms max 24 ms,
+    sample cost avg 7.4 ms (0.7% of the interval) max 514.5 ms,
+    over 10 ms 47 of 3557, slowest 514.5/20.9/19.6/16.5/14.3,
+    own CPU avg 5.1% max 10.8%, private 34.6 MB -> 32.0 MB
+  No exception_trace.log. Full minute-by-minute log: soak log copy in the
+  scratchpad (soak_hour_summary.log); the summary line above is verbatim.
+
+  Leak check (separate sampler, once a minute, 60 samples, GetGuiResources):
+    private_mb  first 30.9  last 32.7  min 30.9  max 33.4
+    handles     first 285   last 283   min 283   max 285
+    gdi         19 throughout
+    user        15 throughout
+
+  NFR-001 (sampling at or under 1% of one logical processor over one hour):
+    MET - 7.4 ms per 1 s interval = 0.74% average; 1.3% of ticks over 10 ms;
+    one 514.5 ms outlier at about 22:12 (single tick; not reproduced).
+  Whole-process CPU 5.1% average: dominated by rendering (about 16 ms per
+    repaint, 4 repaints a second), as intent Q3 anticipated; render target to
+    be set from this measurement.
+
+## Scripted 5,000-process frames (R-4)
+  taskman_cli synthetic --processes 5000 --save-frames 30: 30 frames, 19.5 MB
+  Replay in the lean window, 30 s:
+    frames shown 30, dropped 0, processes max 5000, render avg 15.2 ms max 16 ms,
+    tick avg 37.0 ms max 174 ms
+  Finding: decoding and rebuilding 5,000 rows costs up to 174 ms on the GUI
+  processor when a frame arrives (inside the 250 ms tick; still responsive).
+
+## Live smoke tests
+  taskman_cli capabilities: 23 metric lines + process_table "native, self-check passed";
+    temperature "no thermal zone instance", battery "no battery", GPU "not read in Phase 1"
+  taskman_cli snapshot --top 5 --self: readings, top processes, own cost; package 43.3 W
+  bad arguments: exit 2 with usage; save-frames 4 -> 4 TMF1 frames in the file
+  taskman_stress cpu --threads 4 --seconds 3: 3.47 s, identity line first
+  taskman_stress memory --mb 256 --step-mb 64: 64/128/192/256 MB held
+  taskman_stress disk --mb 64 --seconds 3: 89 passes, 5696 MB written and read, file deleted
+  Screenshots: live window and 5,000-process replay (scratchpad gui_live.png, gui_5000.png)
+
+## Defects found by running for real (fixed; oracle entries added)
+  1. cpu.package_watts read the Energy Meter "_Total" instance (always 0) when it
+     came after the package instance: now the package instance only. New
+     acceptance test asserts 1-500 W.
+  2. simple_shell.h redefines _WIN32_WINNT to 0x0602 and F_code big files leak
+     macros across classes: the Windows guard now checks the true minimum (0x0602).
+  3. Check-mark glyphs rendered as empty boxes: ASCII + / x.
+  4. Soak log printed fake zeros (private 0 B, deposited 0): now n/a or real counts.
+  5. Test design: a wait loop holding the slot starved the replayer; parse trap
+     with a statement starting with "(".
+
+## First soak attempt (20:32), for the record
+  Stopped by Claude Code after about 6 minutes because the machine ran out of
+  commit: llama-server (Ollama, for simple_ocr_capture) held about 30 GB,
+  commit 58.0 of 58.9 GB. taskman stayed at about 31 MB. Under paging, sampling
+  rose to 2.1% average and render to 1 s peaks; the budget backed off; nothing
+  dropped. Not counted as the NFR-001 measurement.
+
+## Phase 1 acceptance (intent-v2) - status
+  [x] Library tests pass in the F_code test binary (191)
+  [x] A target with only probe, model, sampling compiles (simple_taskman_measure)
+  [~] Native self-check passes here; forced to fail it refuses (test); the
+      documented fallback passes its own tests, but the full suite has not been
+      run with the fallback forced
+  [x] Window live and in replay: grid, heatmap, four tiles, capability panel,
+      own overhead; responsive for one hour live (render max 16 ms, tick max 24 ms, 0 dropped)
+  [x] Capability panel here: temperature and battery not supported; package power available
+  [x] No unavailable reading shown as a number
+  [x] Sampling at or under 1% over one hour (0.74%); whole-process CPU and render recorded
+  [x] Scripted 5,000-process frame: render and tick times recorded
+  [x] CLI snapshot and capabilities; stress CPU, memory, uncached disk, identity first
+  [ ] QPC during sleep (needs Larry to sleep the machine: taskman_cli clockwatch)
+  [ ] Decision: CPU tile on "% Processor Time" (spec) or "% Processor Utility" (Task Manager)
+  [ ] Upstream W-1 (sparkline gaps) before the P1 gate

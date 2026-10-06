@@ -145,6 +145,7 @@ feature {NONE} -- Tick
 				if attached l_text as al_frame then
 					codec.decode (al_frame)
 					if codec.has_frame then
+						soak.note_slot (slot_deposited (al_slot), slot_dropped (al_slot))
 						show_frame (codec.last_frame, slot_dropped (al_slot))
 					else
 						window.log_line ({STRING_32} "frame not decoded: " + codec.last_error)

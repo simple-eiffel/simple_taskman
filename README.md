@@ -16,9 +16,10 @@ Part of the [Simple Eiffel](https://github.com/simple-eiffel) ecosystem.
 
 🚧 **In development: v0.1.0, product phase 1 ("see it move")**
 
-- Measurement library done and hardened: 182 tests passed at the last full run (2026-10-05), with contracts monitored
+- Measurement library done and hardened: 191 tests pass (2026-10-05), with contracts monitored
 - Window, command line, and stress tool built and run live on Windows 11
-- Still to do for phase 1: a one-hour soak and a sleep/wake clock check
+- One-hour live soak passed: sampling cost 0.74% of one processor (budget 1%), 3,557 frames with none dropped, and no growth in memory, handles, or GDI objects
+- Still to do for phase 1: a sleep/wake clock check
 - Not yet: the recorder (phase 2) and the diagnosis rules (phase 3)
 
 A reading the machine cannot supply says why ("not supported: no thermal zone instance"). It is never shown as 0.
