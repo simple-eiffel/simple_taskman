@@ -104,7 +104,7 @@ taskman_stress: cpu (N SCOOP spinners), memory (growth, every page touched),
   [x] Scripted 5,000-process frame: render and tick times recorded
   [x] CLI snapshot and capabilities; stress CPU, memory, uncached disk, identity first
   [x] QPC during sleep: keeps counting (S3, 2026-10-06; see below)
-  [ ] Decision: CPU tile on "% Processor Time" (spec) or "% Processor Utility" (Task Manager)
+  [x] Decision (Larry, 2026-10-06): CPU tile shows "% Processor Utility", like Task Manager
   [ ] Upstream W-1 (sparkline gaps) before the P1 gate
 
 ## QPC across sleep (2026-10-06, Larry slept the machine)
@@ -127,3 +127,13 @@ taskman_stress: cpu (N SCOOP spinners), memory (growth, every page touched),
   in it, the continuous timeline absorbs it (the offset grows, then shrinks back to 0),
   and that frame is flagged as clock-adjusted. Two earlier attempts (11:21, 11:24)
   did not sleep the machine (no Kernel-Power events) and are not counted.
+
+## CPU tile decision (2026-10-06)
+  Larry: "use Processor Utility like Task Manager". TM_APP.Cpu_headline is now
+  {TM_METRICS}.Cpu_utility_pct (PDH "\Processor Information(_Total)\% Processor Utility",
+  NOCAP100, metric range 0-400%). The value is shown as measured, so under turbo it can read above
+  100%, where Task Manager stops at 100. cpu.busy_pct is still sampled, recorded and printed by the CLI.
+  ec.sh release -target taskman: 0 problems. Live 15 s run: 14 frames, 0 dropped, sample 8-9 ms.
+  Side observation: right after the S3 wake, C: read 100% busy for a few minutes with almost no
+  process file I/O; minutes later PDH (both our query and a replica of its calls) read 0.6-3.4%.
+  Most likely real post-resume paging/prefetch activity; not reproducible, no code change.

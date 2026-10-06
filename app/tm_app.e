@@ -395,10 +395,11 @@ feature {NONE} -- Implementation
 			-- Sampling interval.
 
 	Cpu_headline: INTEGER
-			-- Metric of the CPU tile: "% Processor Time", as spec 04 has it.
-			-- Open question for Larry: Task Manager uses "% Processor Utility".
+			-- Metric of the CPU tile: "% Processor Utility", the counter Task
+			-- Manager shows (Larry, 2026-10-06). It is scaled by clock frequency,
+			-- so under turbo it can read above 100%, where Task Manager stops at 100.
 		once
-			Result := {TM_METRICS}.Cpu_busy_pct
+			Result := {TM_METRICS}.Cpu_utility_pct
 		end
 
 end
