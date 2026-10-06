@@ -173,6 +173,9 @@ feature {NONE} -- Implementation
 				create l_taskman.make
 				l_taskman.set_nominal_interval (interval_ms).do_nothing
 				start_capabilities_text := codec.encode_capabilities (l_taskman.capabilities)
+				if not store_path.is_empty then
+					start_recording (l_taskman)
+				end
 				taskman_cell := l_taskman
 			end
 		ensure
@@ -192,6 +195,10 @@ feature {NONE} -- Implementation
 			if not l_retried then
 				a_taskman.close
 			end
+			if attached writer_lock as al_lock then
+				al_lock.release
+				writer_lock := Void
+			end
 		rescue
 			last_failure := exception_text
 			l_retried := True
@@ -200,6 +207,46 @@ feature {NONE} -- Implementation
 
 	start_capabilities_text: STRING_8
 			-- Capability report encoded at start-up.
+
+	writer_lock: detachable TM_SINGLE_WRITER
+			-- Held while this worker records.
+
+	recording_note: STRING_32
+			-- Why this worker is not recording; empty while it records or was not asked to.
+		attribute
+			create Result.make_empty
+		end
+
+	start_recording (a_taskman: SIMPLE_TASKMAN)
+			-- Become the session's one recorder and attach a SQLite store at `store_path' to `a_taskman'.
+			-- Another recorder, or a file that cannot be opened, leaves sampling running unrecorded.
+		require
+			path_given: not store_path.is_empty
+		local
+			l_lock: TM_SINGLE_WRITER
+			l_store: TM_SQLITE_TRACE_STORE
+			l_retried: BOOLEAN
+		do
+			if not l_retried then
+				create l_lock.make ({TM_SINGLE_WRITER}.Default_name)
+				if l_lock.is_owner then
+					create l_store.make_writer (store_path, create {TM_RETENTION_POLICY}.make_default)
+					if l_store.is_writable then
+						a_taskman.attach_store (l_store).do_nothing
+						writer_lock := l_lock
+					else
+						recording_note := {STRING_32} "not recording: " + l_store.last_error
+						l_lock.release
+					end
+				else
+					recording_note := {STRING_32} "another simple_taskman is recording"
+				end
+			end
+		rescue
+			recording_note := {STRING_32} "not recording: " + exception_text
+			l_retried := True
+			retry
+		end
 
 	taskman_cell: detachable SIMPLE_TASKMAN
 			-- The facade made by `start'; Void when start-up failed.

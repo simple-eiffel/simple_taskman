@@ -47,10 +47,13 @@ feature {NONE} -- Initialization
 			create disk_tile.make ("Busiest disk")
 			create power_tile.make ("CPU package")
 			create capability_view.make
+			store_path := trace_path
 			create status_bar.make
 			status_bar.set_left ("Starting...")
 			create l_slot.make
 			slot := l_slot
+			create scrub_view.make
+			scrub_view.set_handlers (agent on_scrub, agent on_live)
 			window.set_root (layout)
 			window.set_on_tick (agent on_tick)
 			if not echo_path.is_empty then
@@ -60,6 +63,9 @@ feature {NONE} -- Initialization
 			started := clock.monotonic_ticks
 			window.run
 			request_stop (l_slot)
+			if attached reader as al_reader and then al_reader.is_open then
+				al_reader.close
+			end
 			if soak_seconds > 0 then
 				soak.finish (window.last_render_ms)
 			end
@@ -90,6 +96,7 @@ feature {NONE} -- Layout
 			create Result.make
 			Result := Result.with_padding (10.0).with_gap (8.0)
 			Result.put (l_tiles)
+			Result.put (scrub_view.row)
 			Result.put (l_split)
 			Result.put (status_bar)
 		end
@@ -103,7 +110,7 @@ feature {NONE} -- Frame source
 			l_replayer: separate TM_FRAME_FILE_REPLAYER
 		do
 			if replay_path.is_empty then
-				create l_worker.make (Interval_ms, {STRING_32} "")
+				create l_worker.make (Interval_ms, store_path)
 				attach_worker (l_worker, a_slot)
 				launch_worker (l_worker)
 				soak.start ("live", core_view.rows * core_view.columns)
@@ -155,6 +162,11 @@ feature {NONE} -- Tick
 					status_bar.set_left ({STRING_32} "Sampling stopped: " + al_failure)
 				end
 			end
+			ticks_since_refresh := ticks_since_refresh + 1
+			if ticks_since_refresh >= Refresh_ticks then
+				ticks_since_refresh := 0
+				refresh_history
+			end
 			soak.note_tick (((clock.monotonic_ticks - tick_start) // 10_000).to_integer_32)
 			if soak_seconds > 0 and then clock.monotonic_ticks - started >= soak_seconds.to_integer_64 * 10_000_000 then
 				soak_seconds := 0
@@ -171,8 +183,11 @@ feature {NONE} -- Tick
 		local
 			l_left, l_right: STRING_32
 		do
-			process_view.show (a_frame)
-			core_view.show (a_frame.readings)
+			last_live_frame := a_frame
+			if not scrub_view.is_scrubbing then
+				process_view.show (a_frame)
+				core_view.show (a_frame.readings)
+			end
 			cpu_tile.show (reading (a_frame, Cpu_headline), metrics.metric (Cpu_headline), {STRING_32} "")
 			memory_tile.show (reading (a_frame, {TM_METRICS}.Mem_commit_pct), metrics.metric ({TM_METRICS}.Mem_commit_pct), {STRING_32} "")
 			show_busiest_disk (a_frame)
@@ -199,7 +214,9 @@ feature {NONE} -- Tick
 			if not process_view.notice.is_empty then
 				l_left.append ({STRING_32} " | " + process_view.notice)
 			end
-			status_bar.set_left (l_left)
+			if not scrub_view.is_scrubbing then
+				status_bar.set_left (l_left)
+			end
 			if replay_path.is_empty then
 				l_right := {STRING_32} "taskman: "
 					+ format.reading_text (reading (a_frame, {TM_METRICS}.Self_cpu_pct), metrics.metric ({TM_METRICS}.Self_cpu_pct))
@@ -236,6 +253,155 @@ feature {NONE} -- Tick
 				disk_tile.show (create {TM_READING}.make_unavailable, metrics.metric ({TM_METRICS}.Disk_busy_pct), {STRING_32} "")
 			end
 		end
+
+	busiest_disk (a_frame: TM_FRAME): TM_READING
+			-- The highest available disk busy reading of `a_frame'; unavailable when none.
+		local
+			l_reading: TM_READING
+		do
+			create Result.make_unavailable
+			across a_frame.readings.instances ({TM_METRICS}.Disk_busy_pct) as ic loop
+				l_reading := a_frame.readings.reading ({TM_METRICS}.Disk_busy_pct, ic)
+				if l_reading.is_available and then (not Result.is_available or else l_reading.value > Result.value) then
+					Result := l_reading
+				end
+			end
+		end
+
+feature {NONE} -- History (Phase 2 DVR)
+
+	trace_path: STRING_32
+			-- The per-user recording, unless `--no-record' or a replay; empty for none.
+		local
+			l_paths: TM_PATHS
+		do
+			create l_paths.make
+			if replay_path.is_empty and not no_record and l_paths.has_root then
+				Result := l_paths.trace_path
+			else
+				create Result.make_empty
+			end
+		end
+
+	refresh_history
+			-- Open the recording for reading once it exists, then follow its span.
+		local
+			l_reader: TM_SQLITE_TRACE_STORE
+			l_note: STRING_32
+		do
+			if not store_path.is_empty then
+				if reader = Void and then (create {RAW_FILE}.make_with_name (store_path)).exists then
+					create l_reader.make_reader (store_path)
+					if l_reader.is_open then
+						reader := l_reader
+					end
+				elseif attached reader as al_reader and then al_reader.is_open then
+					al_reader.refresh
+				end
+				if attached reader as al_reader and then al_reader.is_open and then al_reader.frame_count > 0 then
+					l_note := {STRING_32} "recorded since " + scrub_view.clock_time (al_reader.earliest_ticks)
+						+ {STRING_32} ", " + al_reader.frame_count.out.to_string_32 + {STRING_32} " frames, "
+						+ format.bytes (al_reader.size_bytes)
+					scrub_view.set_span (al_reader.earliest_ticks, al_reader.latest_ticks, l_note)
+				end
+			end
+		end
+
+	on_scrub (a_ticks: INTEGER_64)
+			-- Show the recorded moment nearest `a_ticks' in every view.
+		local
+			l_before: TM_WINDOW
+			l_note: STRING_32
+		do
+			if attached reader as al_reader and then al_reader.is_open and then attached al_reader.frame_nearest (a_ticks) as al_frame then
+				process_view.show (al_frame)
+				core_view.show (al_frame.readings)
+				l_before := al_reader.window (al_frame.end_ticks - History_span, al_frame.end_ticks)
+				cpu_tile.show_history (reading (al_frame, Cpu_headline), metrics.metric (Cpu_headline), {STRING_32} "",
+					history_values (l_before, Cpu_headline))
+				memory_tile.show_history (reading (al_frame, {TM_METRICS}.Mem_commit_pct), metrics.metric ({TM_METRICS}.Mem_commit_pct),
+					{STRING_32} "", history_values (l_before, {TM_METRICS}.Mem_commit_pct))
+				disk_tile.show_history (busiest_disk (al_frame), metrics.metric ({TM_METRICS}.Disk_busy_pct), {STRING_32} "",
+					disk_history (l_before))
+				power_tile.show_history (reading (al_frame, {TM_METRICS}.Cpu_package_watts), metrics.metric ({TM_METRICS}.Cpu_package_watts),
+					{STRING_32} "", history_values (l_before, {TM_METRICS}.Cpu_package_watts))
+				if al_frame.is_discontinuity then
+					l_note := {STRING_32} "gap: the machine was not measured"
+				else
+					l_note := al_frame.activity_count.out.to_string_32 + {STRING_32} " recorded processes, "
+						+ al_frame.omitted_processes.out.to_string_32 + {STRING_32} " quiet ones not recorded"
+				end
+				scrub_view.show_moment (al_frame.start_ticks, {STRING_32} "")
+				status_bar.set_left ({STRING_32} "History " + scrub_view.clock_time (al_frame.start_ticks) + {STRING_32} " | " + l_note
+					+ {STRING_32} " | press Live to return")
+			elseif attached reader as al_reader and then not al_reader.last_error.is_empty then
+				status_bar.set_left ({STRING_32} "History: " + al_reader.last_error)
+			end
+		end
+
+	on_live
+			-- Back to the live views.
+		do
+			cpu_tile.show_live
+			memory_tile.show_live
+			disk_tile.show_live
+			power_tile.show_live
+			if attached last_live_frame as al_frame then
+				process_view.show (al_frame)
+				core_view.show (al_frame.readings)
+			end
+			refresh_history
+		end
+
+	history_values (a_window: TM_WINDOW; a_code: INTEGER): ARRAYED_LIST [REAL_64]
+			-- Available values of system-wide metric `a_code' across `a_window', oldest first.
+		require
+			system_wide: not metrics.metric (a_code).is_instanced
+		local
+			i: INTEGER
+		do
+			create Result.make (a_window.count)
+			from i := 1 until i > a_window.count loop
+				if reading (a_window.frame (i), a_code).is_available then
+					Result.extend (reading (a_window.frame (i), a_code).value)
+				end
+				i := i + 1
+			end
+		end
+
+	disk_history (a_window: TM_WINDOW): ARRAYED_LIST [REAL_64]
+			-- Busiest-disk values across `a_window', oldest first.
+		local
+			i: INTEGER
+		do
+			create Result.make (a_window.count)
+			from i := 1 until i > a_window.count loop
+				if busiest_disk (a_window.frame (i)).is_available then
+					Result.extend (busiest_disk (a_window.frame (i)).value)
+				end
+				i := i + 1
+			end
+		end
+
+	History_span: INTEGER_64 = 600_000_000
+			-- One minute of ticks: the line drawn before a recorded moment.
+
+	Refresh_ticks: INTEGER = 20
+			-- GUI ticks (250 ms) between looks at the recording.
+
+	reader: detachable TM_SQLITE_TRACE_STORE
+			-- The recording, opened for reading on this processor.
+
+	scrub_view: TM_SCRUB_VIEW
+
+	store_path: STRING_32
+			-- The recording the worker writes; empty for none.
+
+	last_live_frame: detachable TM_FRAME
+			-- Newest live frame, shown again on Live.
+
+	ticks_since_refresh: INTEGER
+
 
 	reading (a_frame: TM_FRAME; a_code: INTEGER): TM_READING
 			-- System-wide reading `a_code' of `a_frame'.
@@ -318,6 +484,8 @@ feature {NONE} -- Arguments
 				if argument (i).same_string ({STRING_32} "--replay") and i < argument_count then
 					replay_path := argument (i + 1).twin
 					i := i + 1
+				elseif argument (i).same_string ({STRING_32} "--no-record") then
+					no_record := True
 				elseif argument (i).same_string ({STRING_32} "--echo") and i < argument_count then
 					echo_path := argument (i + 1).twin
 					i := i + 1
@@ -380,6 +548,9 @@ feature {NONE} -- Implementation
 	replay_path: STRING_32
 	echo_path: STRING_32
 	soak_seconds: INTEGER
+
+	no_record: BOOLEAN
+			-- `--no-record': sample without recording.
 	started: INTEGER_64
 	tick_start: INTEGER_64
 	last_render: INTEGER

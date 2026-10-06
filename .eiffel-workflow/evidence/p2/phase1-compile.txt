@@ -1,0 +1,19 @@
+# Phase 2 (Remember) - Phase 1: contracts + skeletal tests
+# Project: D:\prod\simple_taskman  Date: 2026-10-06 12:26
+# Command: ec.sh check -config simple_taskman.ecf -target simple_taskman_tests (EIFGENs cleaned first)
+
+New cluster src/recorder: TM_RETENTION_POLICY, TM_FRAME_MERGER, TM_TRACE_ENTRY, TM_MERGE_GROUP,
+TM_RETENTION_PLANNER, TM_TRACE_STORE (deferred), TM_MEMORY_TRACE_STORE, TM_STORED_FRAME,
+TM_SQLITE_TRACE_STORE, TM_SINGLE_WRITER. ECF: simple_sql library + recorder cluster in target simple_taskman.
+Tests: testing/test_recorder.e, 28 tests registered in TEST_APP (section 'phase 2: recorder').
+
+ECF dependency audit: simple_sql added (simple_* first); no ISE/Gobo additions.
+
+Degree 3: Checking Types
+Degree 2: Generating Byte Code
+Degree 1: Generating Metadata
+System Recompiled.
+[0;32m✓ Syntax and type check passed[0m
+problems (Error code|Syntax error|Warning code): 0
+
+# Status: PASS

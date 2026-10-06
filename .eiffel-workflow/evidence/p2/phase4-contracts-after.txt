@@ -1,0 +1,102 @@
+src/recorder/tm_frame_merger.e:38:		ensure
+src/recorder/tm_frame_merger.e:77:		ensure
+src/recorder/tm_frame_merger.e:95:		require
+src/recorder/tm_frame_merger.e:134:		ensure
+src/recorder/tm_frame_merger.e:157:		ensure
+src/recorder/tm_frame_merger.e:170:		require
+src/recorder/tm_frame_merger.e:181:		ensure
+src/recorder/tm_frame_merger.e:213:		require
+src/recorder/tm_frame_merger.e:268:		ensure
+src/recorder/tm_frame_merger.e:281:		ensure
+src/recorder/tm_frame_merger.e:324:		ensure
+src/recorder/tm_frame_merger.e:330:		require
+src/recorder/tm_frame_merger.e:406:		ensure
+src/recorder/tm_frame_merger.e:437:		ensure
+src/recorder/tm_frame_merger.e:469:		ensure
+src/recorder/tm_memory_trace_store.e:30:		ensure
+src/recorder/tm_memory_trace_store.e:78:		require
+src/recorder/tm_memory_trace_store.e:82:		ensure
+src/recorder/tm_memory_trace_store.e:187:		ensure
+src/recorder/tm_memory_trace_store.e:200:		ensure
+src/recorder/tm_memory_trace_store.e:220:		ensure
+src/recorder/tm_memory_trace_store.e:224:invariant
+src/recorder/tm_merge_group.e:19:		require
+src/recorder/tm_merge_group.e:24:		ensure
+src/recorder/tm_merge_group.e:49:		require
+src/recorder/tm_merge_group.e:54:		ensure
+src/recorder/tm_merge_group.e:58:invariant
+src/recorder/tm_retention_planner.e:24:		ensure
+src/recorder/tm_retention_planner.e:34:		require
+src/recorder/tm_retention_planner.e:65:		ensure
+src/recorder/tm_retention_planner.e:86:		require
+src/recorder/tm_retention_planner.e:95:		ensure
+src/recorder/tm_retention_policy.e:25:		ensure
+src/recorder/tm_retention_policy.e:35:		require
+src/recorder/tm_retention_policy.e:49:		ensure
+src/recorder/tm_retention_policy.e:62:		require
+src/recorder/tm_retention_policy.e:66:		ensure
+src/recorder/tm_retention_policy.e:72:		require
+src/recorder/tm_retention_policy.e:76:		ensure
+src/recorder/tm_retention_policy.e:82:		require
+src/recorder/tm_retention_policy.e:93:		ensure
+src/recorder/tm_retention_policy.e:99:		require
+src/recorder/tm_retention_policy.e:104:		ensure
+src/recorder/tm_retention_policy.e:143:		ensure
+src/recorder/tm_retention_policy.e:155:invariant
+src/recorder/tm_single_writer.e:24:		require
+src/recorder/tm_single_writer.e:42:		ensure
+src/recorder/tm_single_writer.e:81:		ensure
+src/recorder/tm_single_writer.e:118:invariant
+src/recorder/tm_sqlite_trace_store.e:33:		require
+src/recorder/tm_sqlite_trace_store.e:44:			ensure_folder
+src/recorder/tm_sqlite_trace_store.e:60:		ensure
+src/recorder/tm_sqlite_trace_store.e:68:		require
+src/recorder/tm_sqlite_trace_store.e:101:		ensure
+src/recorder/tm_sqlite_trace_store.e:164:		require
+src/recorder/tm_sqlite_trace_store.e:168:		ensure
+src/recorder/tm_sqlite_trace_store.e:174:		require
+src/recorder/tm_sqlite_trace_store.e:183:		ensure
+src/recorder/tm_sqlite_trace_store.e:196:		require
+src/recorder/tm_sqlite_trace_store.e:201:		ensure
+src/recorder/tm_sqlite_trace_store.e:288:		require
+src/recorder/tm_sqlite_trace_store.e:333:		ensure
+src/recorder/tm_sqlite_trace_store.e:339:		require
+src/recorder/tm_sqlite_trace_store.e:410:		require
+src/recorder/tm_sqlite_trace_store.e:429:		require
+src/recorder/tm_sqlite_trace_store.e:440:		require
+src/recorder/tm_sqlite_trace_store.e:448:		ensure
+src/recorder/tm_sqlite_trace_store.e:454:		require
+src/recorder/tm_sqlite_trace_store.e:465:		require
+src/recorder/tm_sqlite_trace_store.e:503:		ensure
+src/recorder/tm_sqlite_trace_store.e:515:	ensure_folder
+src/recorder/tm_sqlite_trace_store.e:541:		require
+src/recorder/tm_sqlite_trace_store.e:662:		require
+src/recorder/tm_sqlite_trace_store.e:683:		require
+src/recorder/tm_sqlite_trace_store.e:729:		require
+src/recorder/tm_sqlite_trace_store.e:744:invariant
+src/recorder/tm_stored_frame.e:15:		require
+src/recorder/tm_stored_frame.e:22:		ensure
+src/recorder/tm_stored_frame.e:37:		ensure
+src/recorder/tm_stored_frame.e:51:		ensure
+src/recorder/tm_stored_frame.e:57:		require
+src/recorder/tm_stored_frame.e:61:		ensure
+src/recorder/tm_stored_frame.e:65:invariant
+src/recorder/tm_trace_entry.e:18:		require
+src/recorder/tm_trace_entry.e:29:		ensure
+src/recorder/tm_trace_entry.e:53:invariant
+src/recorder/tm_trace_store.e:7:		date by every command, so the invariant reads only attributes.
+src/recorder/tm_trace_store.e:36:		require
+src/recorder/tm_trace_store.e:40:		ensure
+src/recorder/tm_trace_store.e:47:		require
+src/recorder/tm_trace_store.e:50:		ensure
+src/recorder/tm_trace_store.e:57:		require
+src/recorder/tm_trace_store.e:60:		ensure
+src/recorder/tm_trace_store.e:83:		require
+src/recorder/tm_trace_store.e:88:		ensure
+src/recorder/tm_trace_store.e:98:		require
+src/recorder/tm_trace_store.e:105:		require
+src/recorder/tm_trace_store.e:108:		ensure
+src/recorder/tm_trace_store.e:115:		require
+src/recorder/tm_trace_store.e:119:		ensure
+src/recorder/tm_trace_store.e:126:		ensure
+src/recorder/tm_trace_store.e:130:invariant

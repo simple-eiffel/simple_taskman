@@ -135,9 +135,45 @@ feature -- Sampling
 			if attached logger as al_logger then
 				log_tick (al_logger)
 			end
+			if attached store as al_store and then attached recording_merger as al_merger
+					and then has_frame and then last_recorded /= sampler.last_frame then
+				record (al_store, al_merger, sampler.last_frame)
+			end
 		ensure
 			frame_after_first: old sampler.has_snapshot implies has_frame
+			recorded_when_attached: (attached store as al_store and then al_store.is_writable and then has_frame)
+				implies last_recorded = last_frame
 		end
+
+feature -- Recording (Phase 2)
+
+	attach_store (a_store: TM_TRACE_STORE): like Current
+			-- Record every new frame into `a_store', significant processes only; `close' also closes it.
+		require
+			open: not is_closed
+			writable: a_store.is_writable
+			none_yet: store = Void
+		do
+			store := a_store
+			create recording_merger.make (a_store.policy)
+			Result := Current
+		ensure
+			kept: store = a_store
+			result_current: Result = Current
+		end
+
+	store: detachable TM_TRACE_STORE
+			-- Where frames are recorded; Void when not recording.
+
+	recorded: INTEGER
+			-- Frames recorded since `attach_store'.
+
+	skipped_out_of_order: INTEGER
+			-- Frames not recorded because they ended before the recording's last frame
+			-- (a new session's timeline can start earlier: review issue 6).
+
+	Retention_every: INTEGER = 60
+			-- Frames recorded between retention passes.
 
 feature -- Access
 
@@ -201,6 +237,9 @@ feature -- Termination
 		do
 			process_source.close
 			system_source.close
+			if attached store as al_store and then al_store.is_open then
+				al_store.close
+			end
 			is_closed := True
 		ensure
 			closed: is_closed
@@ -214,7 +253,41 @@ feature {NONE} -- Implementation
 	sampler: TM_SAMPLER
 	logger: detachable SIMPLE_LOGGER
 
+	recording_merger: detachable TM_FRAME_MERGER
+			-- Reduces frames before they are recorded.
+
+	last_recorded: detachable TM_FRAME
+			-- The last frame offered to the store.
+
 	Ticks_per_ms: INTEGER_64 = 10_000
+
+	record (a_store: TM_TRACE_STORE; a_merger: TM_FRAME_MERGER; a_frame: TM_FRAME)
+			-- Append `a_frame', reduced, unless it would break the recording's order; retention every
+			-- `Retention_every' frames. Failures are logged, never raised: sampling goes on.
+		do
+			last_recorded := a_frame
+			if a_store.is_writable then
+				if a_store.is_empty or else a_frame.start_ticks >= a_store.latest_ticks then
+					a_store.append (a_merger.reduced (a_frame))
+					if a_store.last_error.is_empty then
+						recorded := recorded + 1
+						if recorded \\ Retention_every = 0 then
+							a_store.apply_retention
+						end
+					end
+					if not a_store.last_error.is_empty and then attached logger as al_logger then
+						al_logger.warn ({STRING_32} "simple_taskman: recording: " + a_store.last_error)
+					end
+				else
+					skipped_out_of_order := skipped_out_of_order + 1
+					if attached logger as al_logger then
+						al_logger.warn ({STRING_32} "simple_taskman: frame not recorded: it ends before the recording's last frame")
+					end
+				end
+			end
+		ensure
+			remembered: last_recorded = a_frame
+		end
 
 	log_tick (a_logger: SIMPLE_LOGGER)
 			-- Record the decisions of the last `sample': a failed read, a gap, a clock change.

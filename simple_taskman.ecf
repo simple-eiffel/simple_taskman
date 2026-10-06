@@ -48,7 +48,9 @@
 			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
 		</option>
 		<library name="simple_logger" location="$SIMPLE_EIFFEL/simple_logger/simple_logger.ecf"/>
+		<library name="simple_sql" location="$SIMPLE_EIFFEL/simple_sql/simple_sql.ecf"/>
 		<cluster name="handoff" location=".\src\handoff\"/>
+		<cluster name="recorder" location=".\src\recorder\"/>
 		<cluster name="facade" location=".\src\"/>
 	</target>
 

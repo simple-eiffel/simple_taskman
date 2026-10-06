@@ -43,6 +43,7 @@ feature {NONE} -- Initialization
 			run_harden_input_tests
 			run_harden_scoop_tests
 			run_target_tests
+			run_recorder_tests
 			run_acceptance_tests
 			say ("%N========================%N")
 			say ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
@@ -398,6 +399,45 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_commands_refuse_bad_values, "commands_refuse_bad_values")
 			run_test (agent t.test_spinner_on_its_own_processor, "spinner_on_its_own_processor")
 			run_test (agent t.test_disk_load_round_trip, "disk_load_round_trip")
+		end
+
+	run_recorder_tests
+		local
+			t: TEST_RECORDER
+		do
+			section ("phase 2: recorder")
+			create t
+			run_test (agent t.test_policy_defaults, "policy_defaults")
+			run_test (agent t.test_policy_significance, "policy_significance")
+			run_test (agent t.test_policy_buckets, "policy_buckets")
+			run_test (agent t.test_reduce_keeps_significant_only, "reduce_keeps_significant_only")
+			run_test (agent t.test_reduce_caps_and_counts_omitted, "reduce_caps_and_counts_omitted")
+			run_test (agent t.test_reduce_picks_from_each_ranking, "reduce_picks_from_each_ranking")
+			run_test (agent t.test_merge_weighted_mean, "merge_weighted_mean")
+			run_test (agent t.test_merge_peak_takes_max, "merge_peak_takes_max")
+			run_test (agent t.test_merge_never_available_keeps_reason, "merge_never_available_keeps_reason")
+			run_test (agent t.test_merge_partly_available_uses_measured_time_only, "merge_partly_available_uses_measured_time_only")
+			run_test (agent t.test_merge_process_rates_and_memory, "merge_process_rates_and_memory")
+			run_test (agent t.test_merge_flags, "merge_flags")
+			run_test (agent t.test_planner_groups_by_bucket, "planner_groups_by_bucket")
+			run_test (agent t.test_planner_breaks_at_pin_and_gap, "planner_breaks_at_pin_and_gap")
+			run_test (agent t.test_planner_ignores_young_frames, "planner_ignores_young_frames")
+			run_test (agent t.test_memory_store_append_window_nearest, "memory_store_append_window_nearest")
+			run_test (agent t.test_memory_store_retention_merges_old_frames, "memory_store_retention_merges_old_frames")
+			run_test (agent t.test_memory_store_retention_runs_all_tiers, "memory_store_retention_runs_all_tiers")
+			run_test (agent t.test_memory_store_pinned_frames_survive, "memory_store_pinned_frames_survive")
+			run_test (agent t.test_sqlite_round_trip, "sqlite_round_trip")
+			run_test (agent t.test_sqlite_keeps_non_ascii_names, "sqlite_keeps_non_ascii_names")
+			run_test (agent t.test_sqlite_reader_sees_committed_frames_only, "sqlite_reader_sees_committed_frames_only")
+			run_test (agent t.test_sqlite_writer_reopens_and_continues, "sqlite_writer_reopens_and_continues")
+			run_test (agent t.test_sqlite_retention_matches_memory, "sqlite_retention_matches_memory")
+			run_test (agent t.test_sqlite_size_cap_deletes_oldest, "sqlite_size_cap_deletes_oldest")
+			run_test (agent t.test_sqlite_schema_refuses_a_fake_zero, "sqlite_schema_refuses_a_fake_zero")
+			run_test (agent t.test_sqlite_reader_of_missing_file_says_why, "sqlite_reader_of_missing_file_says_why")
+			run_test (agent t.test_facade_records_each_new_frame, "facade_records_each_new_frame")
+			run_test (agent t.test_facade_skips_frames_out_of_order, "facade_skips_frames_out_of_order")
+			run_test (agent t.test_single_writer_second_is_refused, "single_writer_second_is_refused")
+			run_test (agent t.test_single_writer_release_lets_the_next_in, "single_writer_release_lets_the_next_in")
 		end
 
 	run_acceptance_tests

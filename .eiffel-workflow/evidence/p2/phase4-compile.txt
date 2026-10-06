@@ -1,0 +1,29 @@
+# Phase 2 (Remember) - Phase 4: implementation
+# Date: 2026-10-06 12:46
+
+## Build
+ec.sh test -config simple_taskman.ecf -target simple_taskman_tests (clean EIFGENs after the eiffel_sqlite_2025 fix)
+Built: EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe (1s ago)
+problems (Error code|Syntax error|Warning code|warning C|error C|ERROR): 0
+ec.sh check -target taskman: 0 problems
+
+## Tests
+Results: 222 passed, 0 failed
+ALL TESTS PASSED
+recorder tests passing: 31
+
+## Contract changes during implementation (reviewed, intentional)
+1. TM_TRACE_STORE.append: postconditions now hold when last_error is empty, plus unchanged_on_failure
+   (a disk-full or locked file cannot satisfy 'counted'; the failure is reported, never hidden).
+2. TM_TRACE_STORE gains the policy attribute (moved up from both stores; the facade builds its merger from it).
+3. TM_FRAME_MERGER: every_key_present and available_only_from_available used readings.instances, which
+   is empty for non-instanced metrics, so they checked nothing; new keys_of covers both kinds.
+4. TM_SQLITE_TRACE_STORE.refresh added (reader follows a recording another process writes).
+
+## Library fix found by these tests
+eiffel_sqlite_2025 e14213b: BEGIN/COMMIT/ROLLBACK statements were never finalized, so a closed
+connection stayed a zombie holding the file until GC (delete failed: Permission denied).
+
+## Lines of contract text: before 71, after 102
+
+# Status: PASS
