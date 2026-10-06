@@ -55,6 +55,7 @@
 		</library>
 		<cluster name="handoff" location=".\src\handoff\"/>
 		<cluster name="recorder" location=".\src\recorder\"/>
+		<cluster name="control" location=".\src\control\"/>
 		<cluster name="facade" location=".\src\"/>
 	</target>
 

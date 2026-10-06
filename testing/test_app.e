@@ -45,6 +45,7 @@ feature {NONE} -- Initialization
 			run_target_tests
 			run_recorder_tests
 			run_harden_recorder_tests
+			run_control_tests
 			run_acceptance_tests
 			say ("%N========================%N")
 			say ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
@@ -459,6 +460,24 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_out_of_order_append_is_refused, "out_of_order_append_is_refused")
 			run_test (agent t.test_bad_policies_are_refused, "bad_policies_are_refused")
 			run_test (agent t.test_two_hours_of_frames_retain_in_time, "two_hours_of_frames_retain_in_time")
+		end
+
+	run_control_tests
+		local
+			t: TEST_CONTROL
+		do
+			section ("phase 3: process details and actions")
+			create t
+			run_test (agent t.test_priority_classes, "priority_classes")
+			run_test (agent t.test_action_results, "action_results")
+			run_test (agent t.test_details_of_this_process, "details_of_this_process")
+			run_test (agent t.test_a_reused_pid_reads_as_gone, "a_reused_pid_reads_as_gone")
+			run_test (agent t.test_system_is_protected, "system_is_protected")
+			run_test (agent t.test_window_index_finds_windows, "window_index_finds_windows")
+			run_test (agent t.test_priority_and_efficiency_round_trip, "priority_and_efficiency_round_trip")
+			run_test (agent t.test_end_task_needs_a_window, "end_task_needs_a_window")
+			run_test (agent t.test_end_tree_ends_parent_and_child, "end_tree_ends_parent_and_child")
+			run_test (agent t.test_actions_on_an_ended_process_are_refused, "actions_on_an_ended_process_are_refused")
 		end
 
 	run_acceptance_tests

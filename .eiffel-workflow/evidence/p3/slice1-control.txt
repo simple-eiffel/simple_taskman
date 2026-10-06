@@ -1,0 +1,33 @@
+# Phase 3 (Daily driver) - slice 1: process details, window index, actions
+# Date: 2026-10-06 13:31  Approval: delegated (Larry, 2026-10-06)
+
+Workflow note: in this slice contracts and bodies were written in one pass (thin OS wrappers);
+the review below and the tests were done from the contracts afterwards.
+
+Classes (src/control): TM_PRIORITY, TM_ACTION_RESULT, TM_PROCESS_DETAILS, TM_HANDLE_ACCESS,
+TM_PROCESS_INSPECTOR, TM_WINDOW_INDEX, TM_PROCESS_CONTROL.
+
+Review points (self):
+- Every open checks the creation time (TM_HANDLE_ACCESS): a reused pid reads as gone and is never acted on.
+- Protected: pid 0/4, core names, and anything Windows marks critical; checked before any open.
+- Windows 10 APIs via GetProcAddress (simple_shell.h lowers _WIN32_WINNT in F_code big files).
+- Realtime priority is never set.
+- End task posts WM_CLOSE only to windows still owned by that pid; End tree adopts only children created after the parent.
+
+-- phase 3: process details and actions --
+  PASS: priority_classes
+  PASS: action_results
+  PASS: details_of_this_process
+  PASS: a_reused_pid_reads_as_gone
+  PASS: system_is_protected
+  PASS: window_index_finds_windows
+  PASS: priority_and_efficiency_round_trip
+  PASS: end_task_needs_a_window
+  PASS: end_tree_ends_parent_and_child
+  PASS: actions_on_an_ended_process_are_refused
+
+
+Results: 244 passed, 0 failed
+ALL TESTS PASSED
+Environment finding: this session's PATH lacks System32; cmd.exe could not find ping.exe (test now uses the full path).
+# Status: PASS
