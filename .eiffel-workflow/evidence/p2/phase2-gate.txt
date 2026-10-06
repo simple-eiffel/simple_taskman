@@ -1,0 +1,32 @@
+# Phase 2 (Remember) - gate status
+# Date: 2026-10-06 13:45   Machine: JACKJACK
+
+## Acceptance (intent-v3, Phase 2)
+[x] Recorder writes frames to SQLite in the owner's profile (%LOCALAPPDATA%\simple_taskman\trace.db), schema v1
+    (payload BLOB zlib, meta payload_encoding = zlib; process rows for tier 1-2 frames only - see below)
+[~] One writer per user: named mutex Local\simple_taskman.recorder; second holder refused (test, in process);
+    a second live window opening read-only not yet exercised on screen
+[x] Retention tiers 1 s/1 h, 10 s/24 h, 60 s/30 d; size cap; pinned frames never merged or deleted (tests, both stores agree)
+[x] Replay of recorded frames reproduces them (codec text identical after a SQLite round trip, non-ASCII names intact)
+[~] After the stress tool exits, the recording shows its load and process: taskman_cli trace reads any recorded moment
+    while the window records (live, 13:12); the on-screen check is pending (no window opened while the owner works)
+[~] DVR: History strip, every view follows the chosen moment, Live returns; built and type-checked, `--history N`
+    added for an automated screenshot; on-screen check pending
+[x] Writes <= 20 MB/h: 6.3 MB/h (3-minute run, process WriteTransferCount); 7.6 MB/h over 14 minutes of the
+    long soak including a compile running alongside
+[~] Database <= 250 MB: 1,590 bytes a frame measured (822 frames); steady state ESTIMATED at about 123 MB
+    (3,600 + 8,640 + 43,200 frames, merged frames assumed 1.5x); the cap enforces 250 MB regardless (test)
+[x] Window cost within D-4 while recording: own CPU 5.2% (Task Manager 8.0%), private 31-33 MB
+[ ] Two-hour soak: started 13:09:24, ended 13:25:38 when the window was closed at the desk (sw_session.log
+    "window closed", no exception, last input seconds before); 973 s recorded, 1 frame dropped (during a compile)
+
+## How the write budget was met (measured, same machine, same day)
+  rows for every frame, commit every 10 frames ........ 50.0 MB/h
+  zlib payload, quiet large processes once per 10 s,
+  process rows for merged frames only, commit every 30 .. 6.3 MB/h
+
+## Findings fixed during the gate
+  - eiffel_sqlite_2025: BEGIN/COMMIT/ROLLBACK statements never finalized (commit e14213b, not yet pushed)
+  - simple_sql re-raises SQL errors: store now rescues every call (hostile-file tests)
+  - ec.sh release drops cairo.dll beside the exe: a GUI started without it waits on an invisible dialog (oracle gotcha)
+  - The soak log wrote a line a minute in every session: now only with --soak

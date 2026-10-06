@@ -15,10 +15,13 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_activity: TM_PROCESS_ACTIVITY; a_format: TM_FORMAT; a_is_self: BOOLEAN)
-			-- Row for `a_activity'; `a_is_self' marks this tool's own row (FR-053, I-008).
+	make (a_activity: TM_PROCESS_ACTIVITY; a_format: TM_FORMAT; a_is_self: BOOLEAN; a_status: READABLE_STRING_32)
+			-- Row for `a_activity'; `a_is_self' marks this tool's own row (FR-053, I-008); `a_status' is
+			-- "App", "Not responding", or empty for a background process.
 		do
 			id := a_activity.id
+			create status_text.make_from_string (a_status)
+			status_key := a_status.as_lower
 			is_self := a_is_self
 			if a_is_self then
 				name_text := {STRING_32} "* " + a_activity.name
@@ -65,6 +68,9 @@ feature {NONE} -- Initialization
 		end
 
 feature -- Access
+
+	status_text: STRING_32
+	status_key: STRING_32
 
 	id: TM_PROCESS_ID
 	is_self: BOOLEAN

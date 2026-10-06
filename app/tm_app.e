@@ -47,6 +47,15 @@ feature {NONE} -- Initialization
 			create disk_tile.make ("Busiest disk")
 			create power_tile.make ("CPU package")
 			create capability_view.make
+			create inspector.make
+			create control.make (inspector)
+			create windows.make
+			create details_view.make
+			create actions_bar.make
+			create side_tabs.make
+			side_tabs.add_page ("Selected process", details_view.group)
+			side_tabs.add_page ("This machine", capability_view.group)
+			side_tabs.select_tab (2)
 			store_path := trace_path
 			create status_bar.make
 			status_bar.set_left ("Starting...")
@@ -54,6 +63,8 @@ feature {NONE} -- Initialization
 			slot := l_slot
 			create scrub_view.make
 			scrub_view.set_handlers (agent on_scrub, agent on_live)
+			actions_bar.set_actions (agent on_action)
+			process_view.set_status_source (agent status_text)
 			window.set_root (layout)
 			window.set_on_tick (agent on_tick)
 			if not echo_path.is_empty then
@@ -77,7 +88,7 @@ feature {NONE} -- Layout
 			-- Tiles across the top, processes beside cores, the status bar at the foot.
 		local
 			l_tiles: SW_ROW
-			l_side: SW_COLUMN
+			l_side, l_main: SW_COLUMN
 			l_split: SW_SPLITTER
 		do
 			create l_tiles.make
@@ -89,8 +100,12 @@ feature {NONE} -- Layout
 			create l_side.make
 			l_side := l_side.with_gap (10.0)
 			l_side.put (core_view.heatmap)
-			l_side.put (capability_view.group)
-			create l_split.make (process_view.grid, l_side)
+			l_side.put (side_tabs)
+			create l_main.make
+			l_main := l_main.with_gap (6.0)
+			l_main.put (actions_bar.toolbar)
+			l_main.put (process_view.grid)
+			create l_split.make (l_main, l_side)
 			l_split.set_ratio (0.66)
 			l_split.set_grow (1.0)
 			create Result.make
@@ -166,6 +181,10 @@ feature {NONE} -- Tick
 					status_bar.set_left ({STRING_32} "Sampling stopped: " + al_failure)
 				end
 			end
+			actions_bar.disarm_if_late
+			if replay_path.is_empty then
+				follow_selection
+			end
 			ticks_since_refresh := ticks_since_refresh + 1
 			if ticks_since_refresh >= Refresh_ticks then
 				ticks_since_refresh := 0
@@ -218,7 +237,7 @@ feature {NONE} -- Tick
 			if not process_view.notice.is_empty then
 				l_left.append ({STRING_32} " | " + process_view.notice)
 			end
-			if not scrub_view.is_scrubbing then
+			if not scrub_view.is_scrubbing and clock.monotonic_ticks > action_message_until then
 				status_bar.set_left (l_left)
 			end
 			if replay_path.is_empty then
@@ -350,6 +369,7 @@ feature {NONE} -- History (Phase 2 DVR)
 	on_live
 			-- Back to the live views.
 		do
+			shown_selection := Void
 			cpu_tile.show_live
 			memory_tile.show_live
 			disk_tile.show_live
@@ -410,6 +430,154 @@ feature {NONE} -- History (Phase 2 DVR)
 
 	ticks_since_refresh: INTEGER
 
+
+feature {NONE} -- Process actions (Phase 3)
+
+	inspector: TM_PROCESS_INSPECTOR
+	control: TM_PROCESS_CONTROL
+	windows: TM_WINDOW_INDEX
+	details_view: TM_DETAILS_VIEW
+	actions_bar: TM_ACTIONS_BAR
+	side_tabs: SW_TABS
+
+	shown_selection: detachable TM_PROCESS_ID
+			-- Identity the details panel shows.
+
+	shown_details: detachable TM_PROCESS_DETAILS
+			-- What the panel shows.
+
+	receipt: detachable TUPLE [id: TM_PROCESS_ID; outcome: TM_ACTION_RESULT; efficiency_on: BOOLEAN]
+			-- The last priority or efficiency change, for Undo.
+
+	ticks_since_windows: INTEGER
+
+	Windows_ticks: INTEGER = 8
+			-- GUI ticks (250 ms) between window-list and details refreshes.
+
+	follow_selection
+			-- Keep the window list, the details panel, and the tools in step with the selection.
+		do
+			ticks_since_windows := ticks_since_windows + 1
+			if ticks_since_windows >= Windows_ticks then
+				ticks_since_windows := 0
+				windows.refresh
+				shown_selection := Void
+			end
+			if attached process_view.selected_id as al_id and then not scrub_view.is_scrubbing then
+				if not (attached shown_selection as al_shown and then al_shown ~ al_id) then
+					shown_selection := al_id
+					shown_details := inspector.details (al_id)
+					if attached shown_details as al_details then
+						details_view.show (selected_name (al_id), al_details, windows)
+					end
+					if side_tabs.selected_index /= 1 then
+						side_tabs.select_tab (1)
+					end
+				end
+				actions_bar.enable (True, attached receipt)
+			else
+				if shown_selection /= Void then
+					shown_selection := Void
+					shown_details := Void
+					details_view.clear
+				end
+				actions_bar.enable (False, attached receipt and not scrub_view.is_scrubbing)
+			end
+		end
+
+	status_text (a_pid: INTEGER_64): STRING_32
+			-- "Not responding", "App", or empty, from the window list.
+		do
+			if windows.is_hung (a_pid) then
+				Result := {STRING_32} "Not responding"
+			elseif windows.has_window (a_pid) then
+				Result := {STRING_32} "App"
+			else
+				create Result.make_empty
+			end
+		end
+
+	selected_name (a_id: TM_PROCESS_ID): STRING_32
+			-- Name of `a_id' in the newest live frame.
+		do
+			if attached last_live_frame as al_frame and then al_frame.has_activity (a_id) then
+				Result := al_frame.activity (a_id).name
+			else
+				Result := {STRING_32} "process " + a_id.pid.out.to_string_32
+			end
+		end
+
+	on_action (a_tool: INTEGER)
+			-- Run toolbar tool `a_tool' on the selected process and say what happened.
+		local
+			l_result: detachable TM_ACTION_RESULT
+			l_priority: TM_PRIORITY
+			l_classes: ARRAY [INTEGER]
+			l_index, i: INTEGER
+		do
+			create l_priority
+			if a_tool = 7 then
+				if attached receipt as al_receipt then
+					if al_receipt.efficiency_on then
+						l_result := control.set_efficiency_mode (al_receipt.id, selected_name (al_receipt.id), False, al_receipt.outcome.prior_priority)
+					elseif l_priority.is_settable (al_receipt.outcome.prior_priority) then
+						l_result := control.set_priority (al_receipt.id, selected_name (al_receipt.id), al_receipt.outcome.prior_priority)
+					end
+					receipt := Void
+				end
+			elseif attached process_view.selected_id as al_id and then not scrub_view.is_scrubbing then
+				inspect a_tool
+				when 1 then
+					l_result := control.end_task (al_id, selected_name (al_id), windows)
+				when 2 then
+					l_result := control.end_process (al_id, selected_name (al_id))
+				when 3 then
+					if attached last_live_frame as al_frame then
+						l_result := control.end_tree (al_id, selected_name (al_id), al_frame)
+					end
+				when 4 then
+					if attached shown_details as al_details and then al_details.is_efficiency_mode then
+						l_result := control.set_efficiency_mode (al_id, selected_name (al_id), False, 0)
+					else
+						l_result := control.set_efficiency_mode (al_id, selected_name (al_id), True, 0)
+						if l_result.succeeded then
+							receipt := [al_id, l_result, True]
+						end
+					end
+				else
+					if attached shown_details as al_details and then al_details.priority_status = {TM_READING_STATUS}.Available then
+						l_classes := l_priority.settable_classes
+						from i := l_classes.lower until i > l_classes.upper loop
+							if l_classes [i] = al_details.priority_class then
+								l_index := i
+							end
+							i := i + 1
+						end
+						if a_tool = 5 and l_index > l_classes.lower then
+							l_result := control.set_priority (al_id, selected_name (al_id), l_classes [l_index - 1])
+						elseif a_tool = 6 and l_index > 0 and l_index < l_classes.upper then
+							l_result := control.set_priority (al_id, selected_name (al_id), l_classes [l_index + 1])
+						else
+							create l_result.make_refused ({STRING_32} "Change priority", {STRING_32} "already at the end of the range")
+						end
+						if l_result.succeeded then
+							receipt := [al_id, l_result, False]
+						end
+					else
+						create l_result.make_refused ({STRING_32} "Change priority", {STRING_32} "its priority could not be read")
+					end
+				end
+			end
+			if attached l_result as al_result then
+				status_bar.set_left (al_result.summary)
+				action_message_until := clock.monotonic_ticks + 60_000_000
+			end
+			shown_selection := Void
+			ticks_since_windows := Windows_ticks
+		end
+
+	action_message_until: INTEGER_64
+			-- The status bar keeps an action's result until this tick.
 
 	reading (a_frame: TM_FRAME; a_code: INTEGER): TM_READING
 			-- System-wide reading `a_code' of `a_frame'.

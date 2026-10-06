@@ -23,6 +23,7 @@ feature {NONE} -- Initialization
 			create notice.make_empty
 			create grid.make (480.0)
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Name", 190.0, agent {TM_PROCESS_ROW}.name_text)).with_key (agent {TM_PROCESS_ROW}.name_key))
+			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Status", 110.0, agent {TM_PROCESS_ROW}.status_text)).with_key (agent {TM_PROCESS_ROW}.status_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("PID", 62.0, agent {TM_PROCESS_ROW}.pid_text)).with_key (agent {TM_PROCESS_ROW}.pid_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("CPU", 66.0, agent {TM_PROCESS_ROW}.cpu_text)).with_key (agent {TM_PROCESS_ROW}.cpu_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Private", 90.0, agent {TM_PROCESS_ROW}.private_text)).with_key (agent {TM_PROCESS_ROW}.private_key))
@@ -30,7 +31,7 @@ feature {NONE} -- Initialization
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Read/s", 88.0, agent {TM_PROCESS_ROW}.read_text)).with_key (agent {TM_PROCESS_ROW}.read_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Write/s", 88.0, agent {TM_PROCESS_ROW}.write_text)).with_key (agent {TM_PROCESS_ROW}.write_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Threads", 62.0, agent {TM_PROCESS_ROW}.threads_text)).with_key (agent {TM_PROCESS_ROW}.threads_key))
-			grid.sort_by (3, True)
+			grid.sort_by (4, True)
 			grid.set_on_select (agent on_select)
 		ensure
 			empty: row_count = 0
@@ -63,7 +64,7 @@ feature -- Element change
 			create notice.make_empty
 			rows.wipe_out
 			across a_frame.activities as ic loop
-				rows.extend (create {TM_PROCESS_ROW}.make (ic, format, attached self_id as al_self and then ic.id ~ al_self))
+				rows.extend (create {TM_PROCESS_ROW}.make (ic, format, attached self_id as al_self and then ic.id ~ al_self, status_of (ic.id.pid)))
 			end
 			grid.set_rows (rows)
 			if attached selected_id as al_selected then
@@ -86,7 +87,25 @@ feature -- Element change
 			one_row_per_activity: row_count = a_frame.activity_count
 		end
 
+	set_status_source (a_source: FUNCTION [INTEGER_64, STRING_32])
+			-- Ask `a_source' for each row's status ("App", "Not responding", or empty).
+		do
+			status_source := a_source
+		end
+
 feature {NONE} -- Implementation
+
+	status_source: detachable FUNCTION [INTEGER_64, STRING_32]
+
+	status_of (a_pid: INTEGER_64): STRING_32
+			-- Status text for `a_pid'; empty without a source.
+		do
+			if attached status_source as al_source then
+				Result := al_source.item ([a_pid])
+			else
+				create Result.make_empty
+			end
+		end
 
 	rows: ARRAYED_LIST [TM_PROCESS_ROW]
 	format: TM_FORMAT

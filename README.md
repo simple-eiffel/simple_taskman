@@ -14,13 +14,15 @@ Part of the [Simple Eiffel](https://github.com/simple-eiffel) ecosystem.
 
 ## Status
 
-🚧 **In development: v0.1.0, product phase 1 ("see it move")**
+🚧 **In development: v0.1.0.** Goal (intent v3): a full replacement for Windows Task Manager, plus a recorder, a diagnosis, and forecasts.
 
-- Measurement library done and hardened: 191 tests pass (2026-10-05), with contracts monitored
+- Measurement library, recorder, and process controls: 244 tests pass (2026-10-06), with contracts monitored
 - Window, command line, and stress tool built and run live on Windows 11
 - One-hour live soak passed: sampling cost 0.74% of one processor (budget 1%), 3,557 frames with none dropped, and no growth in memory, handles, or GDI objects
 - Sleep/wake checked: the high-resolution timer keeps counting through standby, so a sleep shows as a gap frame, never as a rate
-- Not yet: the recorder (phase 2) and the diagnosis rules (phase 3)
+- **Recorder (phase 2) built:** every frame goes to `%LOCALAPPDATA%\simple_taskman\trace.db` (SQLite) and is kept at 1 s for an hour, 10 s for a day, 60 s for 30 days, capped at 250 MB. Measured: 6.3 MB written an hour, 1.6 KB a frame. The window has a History strip to scrub back; `taskman_cli trace` reads any recorded moment while the window records (the History strip is built; its on-screen check is pending)
+- **Everyday features (phase 3) started:** process details (path, command line, user, elevation, architecture, priority, efficiency mode), app windows and Not responding, and End task / End process / End tree / priority / efficiency mode, always by process identity so a reused process id is never touched (tested on its own child processes; the toolbar and details panel await an on-screen check)
+- Not yet: the diagnosis rules, forecasts, services, startup apps
 
 A reading the machine cannot supply says why ("not supported: no thermal zone instance"). It is never shown as 0.
 
@@ -44,8 +46,8 @@ tm.close
 ## What is here
 
 - **Library** (`simple_taskman`): processes from the native table (with a layout self-check and a documented fallback), PDH counters, CPU topology across processor groups, memory, disks, and CPU package power. Frames, windows, and aggregates come with coverage, and there is a lossless text codec. The SCOOP sampling worker hands frames to the GUI through a mailbox that never blocks.
-- **`taskman`**: the window. It shows the process grid, a per-core heatmap, trend tiles, the capability panel, and its own overhead. Options: `--replay FILE`, `--soak SECONDS`, `--echo PNG`.
-- **`taskman_cli`**: `snapshot`, `capabilities`, `synthetic`, and `clockwatch`.
+- **`taskman`**: the window. It shows the process grid with a Status column, actions toolbar, per-core heatmap, trend tiles, a History strip, the selected process's details, the capability panel, and its own overhead. Options: `--history SECONDS` (open scrubbed back), `--no-record`, `--replay FILE`, `--soak SECONDS`, `--echo PNG`.
+- **`taskman_cli`**: `snapshot`, `capabilities`, `synthetic`, `clockwatch`, and `trace [--ago SECONDS] [--top N] [--file PATH]`.
 - **`taskman_stress`**: known CPU, memory, and uncached disk loads, for testing the diagnosis.
 
 ## Build
