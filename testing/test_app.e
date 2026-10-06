@@ -47,6 +47,7 @@ feature {NONE} -- Initialization
 			run_harden_recorder_tests
 			run_control_tests
 			run_performance_tests
+			run_settings_tests
 			run_acceptance_tests
 			say ("%N========================%N")
 			say ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
@@ -461,6 +462,17 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_out_of_order_append_is_refused, "out_of_order_append_is_refused")
 			run_test (agent t.test_bad_policies_are_refused, "bad_policies_are_refused")
 			run_test (agent t.test_two_hours_of_frames_retain_in_time, "two_hours_of_frames_retain_in_time")
+		end
+
+	run_settings_tests
+		local
+			t: TEST_SETTINGS
+		do
+			section ("phase 3: settings")
+			create t
+			run_test (agent t.test_settings_round_trip, "settings_round_trip")
+			run_test (agent t.test_missing_file_keeps_defaults, "missing_file_keeps_defaults")
+			run_test (agent t.test_bad_file_keeps_defaults, "bad_file_keeps_defaults")
 		end
 
 	run_performance_tests

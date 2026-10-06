@@ -34,6 +34,8 @@ feature {NONE} -- Initialization
 			l_details_scroll, l_machine_scroll: SW_SCROLL_AREA
 		do
 			read_arguments
+			create settings.make
+			load_settings
 			create codec.make
 			create format
 			create clock.make
@@ -55,6 +57,7 @@ feature {NONE} -- Initialization
 			create actions_bar.make
 			create machine.make
 			create performance_view.make (machine, Main_page_height)
+			create settings_view.make (settings, <<{STRING_32} "Processes", {STRING_32} "Performance">>)
 			create main_tabs.make
 			create side_tabs.make
 			create l_details_scroll.make (Side_page_height)
@@ -71,6 +74,7 @@ feature {NONE} -- Initialization
 			slot := l_slot
 			create scrub_view.make
 			scrub_view.set_handlers (agent on_scrub, agent on_live)
+			settings_view.set_on_change (agent on_settings_changed)
 			actions_bar.set_actions (agent on_action)
 			process_view.set_status_source (agent status_text)
 			window.set_root (layout)
@@ -118,13 +122,12 @@ feature {NONE} -- Layout
 			l_split.set_grow (1.0)
 			main_tabs.add_page ("Processes", l_split)
 			main_tabs.add_page ("Performance", performance_view.page)
+			main_tabs.add_page ("Settings", settings_view.column)
 			main_tabs.set_grow (1.0)
 			if attached start_page as al_page then
-				across main_tabs.labels as ic loop
-					if ic.as_lower.same_string (al_page) then
-						main_tabs.select_tab (@ic.cursor_index)
-					end
-				end
+				open_page (al_page)
+			else
+				open_page (settings.start_page)
 			end
 			create Result.make
 			Result := Result.with_padding (10.0).with_gap (8.0)
@@ -143,7 +146,7 @@ feature {NONE} -- Frame source
 			l_replayer: separate TM_FRAME_FILE_REPLAYER
 		do
 			if replay_path.is_empty then
-				create l_worker.make (Interval_ms, store_path)
+				create l_worker.make (settings.update_ms, store_path)
 				if tier0_seconds > 0 then
 					set_worker_tier0 (l_worker, tier0_seconds)
 				end
@@ -171,6 +174,12 @@ feature {NONE} -- Tick
 			l_text: detachable STRING_8
 			l_frame_ms, l_selection_ms, l_history_ms, l_mark, l_total_ms: INTEGER_64
 		do
+			if not top_applied then
+				top_applied := True
+				if settings.is_always_on_top then
+					c_set_topmost (True).do_nothing
+				end
+			end
 			soak.note_render (window.last_render_ms)
 			if window.last_render_ms > 0 then
 				last_render := window.last_render_ms
@@ -192,7 +201,9 @@ feature {NONE} -- Tick
 				l_text := collect_frame (al_slot)
 				if attached l_text as al_frame then
 					codec.decode (al_frame)
-					if codec.has_frame then
+					if codec.has_frame and settings.is_paused then
+						status_bar.set_left ({STRING_32} "Paused: the display is frozen; recording goes on. Settings, Update speed resumes.")
+					elseif codec.has_frame then
 						soak.note_slot (slot_deposited (al_slot), slot_dropped (al_slot))
 						show_frame (codec.last_frame, slot_dropped (al_slot))
 					else
@@ -256,7 +267,7 @@ feature {NONE} -- Tick
 			show_busiest_disk (a_frame)
 			power_tile.show (reading (a_frame, {TM_METRICS}.Cpu_package_watts), metrics.metric ({TM_METRICS}.Cpu_package_watts), {STRING_32} "")
 			if replay_path.is_empty then
-				l_left := {STRING_32} "Sampling every " + (Interval_ms // 1000).out.to_string_32 + {STRING_32} " s"
+				l_left := {STRING_32} "Sampling every " + speed_text
 			else
 				frames_replayed := frames_replayed + 1
 				l_left := {STRING_32} "Replay, frame " + frames_replayed.out.to_string_32
@@ -339,7 +350,7 @@ feature {NONE} -- History (Phase 2 DVR)
 			l_paths: TM_PATHS
 		do
 			create l_paths.make
-			if replay_path.is_empty and not no_record and l_paths.has_root then
+			if replay_path.is_empty and not no_record and settings.records and l_paths.has_root then
 				Result := l_paths.trace_path
 			else
 				create Result.make_empty
@@ -470,6 +481,91 @@ feature {NONE} -- History (Phase 2 DVR)
 
 	ticks_since_refresh: INTEGER
 
+
+feature {NONE} -- Settings (Phase 3)
+
+	settings: TM_SETTINGS
+	settings_view: TM_SETTINGS_VIEW
+	top_applied: BOOLEAN
+
+	load_settings
+			-- Read the owner's settings, when there is a profile folder.
+		local
+			l_paths: TM_PATHS
+		do
+			create l_paths.make
+			if l_paths.has_root then
+				settings.load (l_paths.settings_path)
+			end
+		end
+
+	on_settings_changed
+			-- Apply and save a change made on the Settings page.
+		local
+			l_paths: TM_PATHS
+		do
+			create l_paths.make
+			if l_paths.has_root then
+				settings.save (l_paths.settings_path)
+			end
+			if attached slot as al_slot and not settings.is_paused then
+				request_interval (al_slot, settings.update_ms)
+			end
+			c_set_topmost (settings.is_always_on_top).do_nothing
+			if settings.last_error.is_empty then
+				settings_view.set_note ({STRING_32} "Saved. " + speed_text)
+			else
+				settings_view.set_note (settings.last_error)
+			end
+		end
+
+	speed_text: STRING_32
+		do
+			if settings.is_paused then
+				Result := {STRING_32} "paused"
+			elseif settings.update_ms < 1000 then
+				Result := {STRING_32} "0.5 s"
+			else
+				Result := (settings.update_ms // 1000).out.to_string_32 + {STRING_32} " s"
+			end
+		end
+
+	open_page (a_page: READABLE_STRING_32)
+			-- Select the main tab labelled `a_page' (any case).
+		do
+			across main_tabs.labels as ic loop
+				if ic.as_lower.same_string (a_page.as_lower) then
+					main_tabs.select_tab (@ic.cursor_index)
+				end
+			end
+		end
+
+	request_interval (a_slot: separate TM_FRAME_SLOT; a_ms: INTEGER)
+		require
+			sane: a_ms >= 250 and a_ms <= 60_000
+		do
+			a_slot.request_interval (a_ms)
+		end
+
+	c_set_topmost (a_on: BOOLEAN): BOOLEAN
+			-- Put this process's visible top-level window on top of others, or not.
+		external
+			"C inline use <windows.h>"
+		alias
+			"[
+				HWND l_window = GetTopWindow (NULL);
+				DWORD l_pid = 0;
+				while (l_window != NULL) {
+					GetWindowThreadProcessId (l_window, &l_pid);
+					if (l_pid == GetCurrentProcessId () && IsWindowVisible (l_window) && GetWindow (l_window, GW_OWNER) == NULL) {
+						return (EIF_BOOLEAN) (SetWindowPos (l_window, $a_on ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0,
+							SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE) != 0);
+					}
+					l_window = GetWindow (l_window, GW_HWNDNEXT);
+				}
+				return EIF_FALSE;
+			]"
+		end
 
 feature {NONE} -- Process actions (Phase 3)
 

@@ -66,6 +66,16 @@ feature -- Access
 			under_root: Result.starts_with (root)
 		end
 
+	settings_path: STRING_32
+			-- The owner's settings (TOML).
+		require
+			rooted: has_root
+		do
+			Result := root + {STRING_32} "\settings.toml"
+		ensure
+			under_root: Result.starts_with (root)
+		end
+
 	logs_folder: STRING_32
 			-- Folder of the log files.
 		require

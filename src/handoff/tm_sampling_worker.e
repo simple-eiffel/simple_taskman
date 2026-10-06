@@ -97,9 +97,11 @@ feature -- Execution
 		local
 			l_clock: TM_SYSTEM_CLOCK
 			l_budget: TM_SELF_BUDGET
+			l_requested, l_base_ms: INTEGER
 		do
 			if attached slot as al_slot then
 				is_running := True
+				l_base_ms := interval_ms
 				start
 				if attached taskman_cell as al_taskman then
 					create l_clock.make
@@ -109,6 +111,12 @@ feature -- Execution
 					until
 						should_stop (al_slot) or failures >= Failure_limit
 					loop
+						l_requested := requested_interval (al_slot)
+						if l_requested > 0 and then l_requested /= l_base_ms then
+							l_base_ms := l_requested
+							create l_budget.make (1.0, l_base_ms, (l_base_ms * 10).min (Maximum_interval_ms))
+							al_taskman.set_nominal_interval (l_base_ms).do_nothing
+						end
 						tick (al_taskman, l_budget)
 						if attached tick_text as al_text then
 							deposit (al_slot, al_text)
@@ -164,6 +172,11 @@ feature {NONE} -- Slot calls: each locks the slot for one short call
 	report_stopped (a_slot: separate TM_FRAME_SLOT)
 		do
 			a_slot.put_stopped
+		end
+
+	requested_interval (a_slot: separate TM_FRAME_SLOT): INTEGER
+		do
+			Result := a_slot.requested_interval
 		end
 
 	should_stop (a_slot: separate TM_FRAME_SLOT): BOOLEAN

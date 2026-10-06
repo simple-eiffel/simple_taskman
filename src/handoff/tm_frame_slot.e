@@ -55,6 +55,9 @@ feature -- Status report
 	has_failure: BOOLEAN
 			-- Did the worker stop on an error?
 
+	requested_interval: INTEGER
+			-- Interval the window asked for; 0 when it has not asked.
+
 	stop_requested: BOOLEAN
 			-- Has the window asked the worker to stop?
 
@@ -125,6 +128,16 @@ feature -- Element change (GUI side)
 		ensure
 			taken: not has_frame
 			counts_kept: deposited = old deposited and dropped = old dropped
+		end
+
+	request_interval (a_ms: INTEGER)
+			-- Ask the worker to sample every `a_ms' from its next tick (Settings, update speed).
+		require
+			sane: a_ms >= 250 and a_ms <= 60_000
+		do
+			requested_interval := a_ms
+		ensure
+			kept: requested_interval = a_ms
 		end
 
 	request_stop
