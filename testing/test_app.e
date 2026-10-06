@@ -50,6 +50,7 @@ feature {NONE} -- Initialization
 			run_settings_tests
 			run_services_tests
 			run_startup_tests
+			run_session_tests
 			run_acceptance_tests
 			say ("%N========================%N")
 			say ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
@@ -464,6 +465,16 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_out_of_order_append_is_refused, "out_of_order_append_is_refused")
 			run_test (agent t.test_bad_policies_are_refused, "bad_policies_are_refused")
 			run_test (agent t.test_two_hours_of_frames_retain_in_time, "two_hours_of_frames_retain_in_time")
+		end
+
+	run_session_tests
+		local
+			t: TEST_SESSIONS
+		do
+			section ("phase 3: users")
+			create t
+			run_test (agent t.test_this_session_is_listed_with_its_user, "this_session_is_listed_with_its_user")
+			run_test (agent t.test_totals_come_from_the_frame, "totals_come_from_the_frame")
 		end
 
 	run_startup_tests

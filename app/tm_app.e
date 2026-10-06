@@ -57,9 +57,10 @@ feature {NONE} -- Initialization
 			create actions_bar.make
 			create machine.make
 			create performance_view.make (machine, Main_page_height)
-			create settings_view.make (settings, <<{STRING_32} "Processes", {STRING_32} "Performance", {STRING_32} "Services", {STRING_32} "Startup">>)
+			create settings_view.make (settings, <<{STRING_32} "Processes", {STRING_32} "Performance", {STRING_32} "Services", {STRING_32} "Startup", {STRING_32} "Users">>)
 			create services_view.make (Main_page_height)
 			create startup_view.make (Main_page_height)
+			create users_view.make (Main_page_height)
 			create recorder_control
 			create main_tabs.make
 			create side_tabs.make
@@ -80,6 +81,7 @@ feature {NONE} -- Initialization
 			settings_view.set_on_change (agent on_settings_changed)
 			services_view.set_reporter (agent report_action)
 			startup_view.set_reporter (agent report_action)
+			users_view.set_reporter (agent report_action)
 			actions_bar.set_actions (agent on_action)
 			process_view.set_status_source (agent status_text)
 			window.set_root (layout)
@@ -129,6 +131,7 @@ feature {NONE} -- Layout
 			main_tabs.add_page ("Performance", performance_view.page)
 			main_tabs.add_page ("Services", services_view.column)
 			main_tabs.add_page ("Startup", startup_view.column)
+			main_tabs.add_page ("Users", users_view.column)
 			main_tabs.add_page ("Settings", settings_view.column)
 			main_tabs.set_grow (1.0)
 			if attached start_page as al_page then
@@ -511,6 +514,8 @@ feature {NONE} -- Pages refreshed while showing (Phase 3)
 				if main_tabs.selected_index >= 1 and main_tabs.selected_index <= main_tabs.labels.count then
 					if main_tabs.labels [main_tabs.selected_index].same_string ({STRING_32} "Services") then
 						services_view.refresh
+					elseif main_tabs.labels [main_tabs.selected_index].same_string ({STRING_32} "Users") then
+						users_view.refresh (last_live_frame)
 					elseif main_tabs.labels [main_tabs.selected_index].same_string ({STRING_32} "Startup")
 							and main_tabs.selected_index /= shown_page then
 						startup_view.refresh (boot_window)
@@ -522,6 +527,7 @@ feature {NONE} -- Pages refreshed while showing (Phase 3)
 		end
 
 	startup_view: TM_STARTUP_VIEW
+	users_view: TM_USERS_VIEW
 	recorder_control: TM_RECORDER_CONTROL
 
 	boot_window: detachable TM_WINDOW

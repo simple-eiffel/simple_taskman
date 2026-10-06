@@ -29,7 +29,7 @@ feature {NONE} -- Initialization
 			grid.add_column ((create {SW_GRID_COLUMN [TM_STARTUP_ITEM]}.make ("Where", 200.0, agent {TM_STARTUP_ITEM}.where)).with_key (agent {TM_STARTUP_ITEM}.where))
 			grid.sort_by (1, False)
 			create toolbar.make
-			create detail.make_ui ("Startup impact comes from the recording of the three minutes after Windows started.")
+			create detail.make_ui ("Startup impact is measured from the recording of the three minutes after Windows started; turn on Record from logon (Settings) to measure the next boot.")
 			create column.make
 			column := column.with_gap (6.0)
 			column.put (toolbar)
@@ -60,7 +60,7 @@ feature -- Element change
 				if attached a_boot_window as al_window and then not al_window.is_empty and then not ic.image_name.is_empty then
 					ic.set_impact ((create {TM_STARTUP_IMPACT}.make (al_window, ic.image_name)).summary)
 				else
-					ic.set_impact ({STRING_32} "Not measured (nothing was recording at startup)")
+					ic.set_impact ({STRING_32} "Not measured")
 				end
 				rows.extend (ic)
 			end
