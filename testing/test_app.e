@@ -51,6 +51,9 @@ feature {NONE} -- Initialization
 			run_services_tests
 			run_startup_tests
 			run_session_tests
+			run_elevation_tests
+			run_diagnosis_tests
+			run_forecast_tests
 			run_acceptance_tests
 			say ("%N========================%N")
 			say ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
@@ -465,6 +468,42 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_out_of_order_append_is_refused, "out_of_order_append_is_refused")
 			run_test (agent t.test_bad_policies_are_refused, "bad_policies_are_refused")
 			run_test (agent t.test_two_hours_of_frames_retain_in_time, "two_hours_of_frames_retain_in_time")
+		end
+
+	run_elevation_tests
+		local
+			t: TEST_ELEVATION
+		do
+			section ("phase 3: administrator rights")
+			create t
+			run_test (agent t.test_program_path_is_this_executable, "program_path_is_this_executable")
+			run_test (agent t.test_switch_needs_administrator, "switch_needs_administrator")
+		end
+
+	run_forecast_tests
+		local
+			t: TEST_FORECAST
+		do
+			section ("phase 5: forecasts")
+			create t
+			run_test (agent t.test_runway_when_commit_rises_toward_the_limit, "runway_when_commit_rises_toward_the_limit")
+			run_test (agent t.test_alarm_when_runway_is_short, "alarm_when_runway_is_short")
+			run_test (agent t.test_steady_memory, "steady_memory")
+			run_test (agent t.test_watching_until_enough, "watching_until_enough")
+			run_test (agent t.test_leak_suspect_named, "leak_suspect_named")
+		end
+
+	run_diagnosis_tests
+		local
+			t: TEST_DIAGNOSIS
+		do
+			section ("phase 4: diagnosis")
+			create t
+			run_test (agent t.test_cpu_saturation_names_the_culprit, "cpu_saturation_names_the_culprit")
+			run_test (agent t.test_memory_pressure_ranks_first, "memory_pressure_ranks_first")
+			run_test (agent t.test_disk_saturation, "disk_saturation")
+			run_test (agent t.test_calm_window_says_no_bottleneck, "calm_window_says_no_bottleneck")
+			run_test (agent t.test_missing_readings_cannot_be_told, "missing_readings_cannot_be_told")
 		end
 
 	run_session_tests

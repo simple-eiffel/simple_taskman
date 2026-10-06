@@ -62,6 +62,12 @@ feature {NONE} -- Initialization
 			create startup_view.make (Main_page_height)
 			create users_view.make (Main_page_height)
 			create recorder_control
+			create elevation
+			create diagnostician.make
+			create trend_book.make
+			create live_frames.make (Verdict_frames)
+			create verdict_label.make ("Watching: the first verdict comes after ten seconds of frames.", {SW_PAINTER}.Role_ui, 15.0, True)
+			create ahead_label.make_ui ("Look ahead: watching")
 			create main_tabs.make
 			create side_tabs.make
 			create l_details_scroll.make (Side_page_height)
@@ -82,6 +88,8 @@ feature {NONE} -- Initialization
 			services_view.set_reporter (agent report_action)
 			startup_view.set_reporter (agent report_action)
 			users_view.set_reporter (agent report_action)
+			settings_view.set_admin_actions (agent on_restart_elevated, agent on_ctrl_shift_esc)
+			settings_view.set_admin_state (elevation.is_elevated, elevation.is_ctrl_shift_esc_ours)
 			actions_bar.set_actions (agent on_action)
 			process_view.set_status_source (agent status_text)
 			window.set_root (layout)
@@ -142,6 +150,8 @@ feature {NONE} -- Layout
 			create Result.make
 			Result := Result.with_padding (10.0).with_gap (8.0)
 			Result.put (l_tiles)
+			Result.put (verdict_label)
+			Result.put (ahead_label)
 			Result.put (scrub_view.row)
 			Result.put (main_tabs)
 			Result.put (status_bar)
@@ -265,6 +275,7 @@ feature {NONE} -- Tick
 			if replay_path.is_empty then
 				performance_view.show (a_frame)
 			end
+			follow_verdict (a_frame)
 			if not scrub_view.is_scrubbing then
 				process_view.show (a_frame)
 				core_view.show (a_frame.readings)
@@ -421,6 +432,8 @@ feature {NONE} -- History (Phase 2 DVR)
 						+ al_frame.omitted_processes.out.to_string_32 + {STRING_32} " quiet ones not recorded"
 				end
 				scrub_view.show_moment (al_frame.start_ticks, {STRING_32} "")
+				show_verdict (diagnostician.diagnose (al_reader.window (al_frame.end_ticks - Verdict_window_ticks, al_frame.end_ticks)),
+					{STRING_32} "At " + scrub_view.clock_time (al_frame.start_ticks) + {STRING_32} ": ")
 				status_bar.set_left ({STRING_32} "History " + scrub_view.clock_time (al_frame.start_ticks) + {STRING_32} " | " + l_note
 					+ {STRING_32} " | press Live to return")
 			elseif attached reader as al_reader and then not al_reader.last_error.is_empty then
@@ -432,6 +445,7 @@ feature {NONE} -- History (Phase 2 DVR)
 			-- Back to the live views.
 		do
 			shown_selection := Void
+			show_verdict (diagnostician.diagnose (live_window), {STRING_32} "")
 			cpu_tile.show_live
 			memory_tile.show_live
 			disk_tile.show_live
@@ -492,6 +506,101 @@ feature {NONE} -- History (Phase 2 DVR)
 
 	ticks_since_refresh: INTEGER
 
+
+feature {NONE} -- Verdict and look-ahead (Phases 4 and 5)
+
+	diagnostician: TM_DIAGNOSTICIAN
+	trend_book: TM_TREND_BOOK
+	live_frames: ARRAYED_LIST [TM_FRAME]
+	verdict_label: SW_LABEL
+	ahead_label: SW_LABEL
+	frames_since_ahead: INTEGER
+	last_flash: INTEGER_64
+
+	Verdict_frames: INTEGER = 30
+			-- Live frames the verdict looks at.
+
+	Verdict_window_ticks: INTEGER_64 = 300_000_000
+			-- Thirty seconds of a recording, for a verdict at a past moment.
+
+	follow_verdict (a_frame: TM_FRAME)
+			-- Diagnose the newest live frames and refresh the look-ahead line.
+		do
+			if a_frame.is_discontinuity then
+				live_frames.wipe_out
+			end
+			live_frames.extend (a_frame)
+			if live_frames.count > Verdict_frames then
+				live_frames.start
+				live_frames.remove
+			end
+			if not scrub_view.is_scrubbing then
+				show_verdict (diagnostician.diagnose (live_window), {STRING_32} "")
+			end
+			trend_book.add (a_frame)
+			frames_since_ahead := frames_since_ahead + 1
+			if frames_since_ahead >= 5 then
+				frames_since_ahead := 0
+				ahead_label.set_text (trend_book.summary)
+				if trend_book.is_alarming then
+					ahead_label.set_color (theme.danger)
+					if clock.monotonic_ticks - last_flash > 3_000_000_000 then
+						last_flash := clock.monotonic_ticks
+						c_flash.do_nothing
+					end
+				else
+					ahead_label.set_color (theme.ink_muted)
+				end
+			end
+		end
+
+	live_window: TM_WINDOW
+			-- The newest live frames as a window.
+		do
+			create Result.make
+			across live_frames as ic loop
+				if Result.is_empty or else ic.start_ticks >= Result.end_ticks then
+					Result.extend (ic)
+				end
+			end
+		end
+
+	show_verdict (a_verdict: TM_VERDICT; a_prefix: READABLE_STRING_32)
+			-- Put `a_verdict' on the banner, coloured by what it found.
+		do
+			verdict_label.set_text (a_prefix + a_verdict.full_text)
+			if a_verdict.is_found then
+				verdict_label.set_color (theme.danger)
+			elseif a_verdict.kind = {TM_VERDICT}.None then
+				verdict_label.set_color (theme.success)
+			else
+				verdict_label.set_color (theme.ink_muted)
+			end
+		end
+
+	c_flash: BOOLEAN
+			-- Flash this window's taskbar button until it is brought forward.
+		external
+			"C inline use <windows.h>"
+		alias
+			"[
+				HWND l_window = GetTopWindow (NULL);
+				DWORD l_pid = 0;
+				while (l_window != NULL) {
+					GetWindowThreadProcessId (l_window, &l_pid);
+					if (l_pid == GetCurrentProcessId () && IsWindowVisible (l_window) && GetWindow (l_window, GW_OWNER) == NULL) {
+						FLASHWINFO l_info;
+						ZeroMemory (&l_info, sizeof (l_info));
+						l_info.cbSize = sizeof (l_info);
+						l_info.hwnd = l_window;
+						l_info.dwFlags = FLASHW_TRAY | FLASHW_TIMERNOFG;
+						return (EIF_BOOLEAN) FlashWindowEx (&l_info);
+					}
+					l_window = GetWindow (l_window, GW_HWNDNEXT);
+				}
+				return EIF_FALSE;
+			]"
+		end
 
 feature {NONE} -- Pages refreshed while showing (Phase 3)
 
@@ -569,6 +678,35 @@ feature {NONE} -- Pages refreshed while showing (Phase 3)
 				recorder_control.request_stop
 				report_action (l_result.summary + {STRING_32} "; the background recorder was asked to stop")
 			end
+		end
+
+	elevation: TM_ELEVATION
+
+	on_restart_elevated
+			-- Start again with administrator rights, then close this window.
+		local
+			l_result: TM_ACTION_RESULT
+		do
+			if elevation.is_elevated then
+				report_action ({STRING_32} "Already running as administrator")
+			else
+				l_result := elevation.restart_elevated ({STRING_32} "--page " + main_tabs.labels [main_tabs.selected_index.max (1)].as_lower)
+				report_action (l_result.summary)
+				if l_result.succeeded then
+					window.close
+				end
+			end
+		end
+
+	on_ctrl_shift_esc (a_on: BOOLEAN)
+			-- Point Ctrl+Shift+Esc at this program, or back at Task Manager.
+		local
+			l_result: TM_ACTION_RESULT
+		do
+			l_result := elevation.set_ctrl_shift_esc (a_on, elevation.program_path)
+			report_action (l_result.summary)
+			settings_view.set_note (l_result.summary)
+			settings_view.set_admin_state (elevation.is_elevated, elevation.is_ctrl_shift_esc_ours)
 		end
 
 	report_action (a_text: READABLE_STRING_32)
@@ -681,7 +819,7 @@ feature {NONE} -- Process actions (Phase 3)
 
 	performance_view: TM_PERFORMANCE_VIEW
 
-	Main_page_height: REAL_64 = 520.0
+	Main_page_height: REAL_64 = 455.0
 			-- Height of a full-width page under the main tabs in an 820-pixel window.
 
 	shown_selection: detachable TM_PROCESS_ID
@@ -695,7 +833,7 @@ feature {NONE} -- Process actions (Phase 3)
 
 	ticks_since_windows: INTEGER
 
-	Side_page_height: REAL_64 = 250.0
+	Side_page_height: REAL_64 = 185.0
 			-- Viewport of each side tab: the heatmap, the tabs, and the status bar fit an 820-pixel window.
 
 	Windows_ticks: INTEGER = 8

@@ -44,7 +44,14 @@ feature {NONE} -- Initialization
 			column.put (at_logon)
 			column.put (note_label)
 			create extras.make
-			extras := extras.with_gap (16.0)
+			extras := extras.with_gap (12.0)
+			create admin_label.make_ui ("")
+			create admin_button.make ("Restart as administrator", Void)
+			admin_button := admin_button.with_max_size (260.0, 0.0)
+			create ctrl_shift_esc.make ("Open simple_taskman on Ctrl+Shift+Esc (needs administrator; turn off before uninstalling)", False, Void)
+			extras.put (admin_label)
+			extras.put (admin_button)
+			extras.put (ctrl_shift_esc)
 			column.put (extras)
 			create l_row.make
 			show_settings
@@ -53,6 +60,8 @@ feature {NONE} -- Initialization
 			on_top.set_on_change (agent switch_changed)
 			recording.set_on_change (agent switch_changed)
 			at_logon.set_on_change (agent switch_changed)
+			admin_button.set_on_click (agent admin_clicked)
+			ctrl_shift_esc.set_on_change (agent ctrl_shift_esc_changed)
 		end
 
 feature -- Access
@@ -73,6 +82,26 @@ feature -- Element change
 			on_change := a_action
 		end
 
+	set_admin_state (a_elevated, a_ctrl_shift_esc: BOOLEAN)
+			-- Show whether this window has administrator rights and where Ctrl+Shift+Esc goes.
+		do
+			if a_elevated then
+				admin_label.set_text ({STRING_32} "Running as administrator: every process, service, and user can be acted on.")
+			else
+				admin_label.set_text ({STRING_32} "Not running as administrator: some actions are refused, and say so.")
+			end
+			quiet := True
+			ctrl_shift_esc.set_on (a_ctrl_shift_esc)
+			quiet := False
+		end
+
+	set_admin_actions (a_restart: PROCEDURE; a_ctrl_shift_esc: PROCEDURE [BOOLEAN])
+			-- Call `a_restart' for the button and `a_ctrl_shift_esc' when the switch moves.
+		do
+			restart_action := a_restart
+			ctrl_shift_esc_action := a_ctrl_shift_esc
+		end
+
 	set_note (a_text: READABLE_STRING_GENERAL)
 		do
 			note_label.set_text (a_text)
@@ -82,7 +111,27 @@ feature {NONE} -- Implementation
 
 	pages: ARRAYED_LIST [STRING_32]
 	speed, page_choice: SW_SEGMENTED
-	on_top, recording, at_logon: SW_SWITCH
+	on_top, recording, at_logon, ctrl_shift_esc: SW_SWITCH
+	admin_label: SW_LABEL
+	admin_button: SW_BUTTON
+	restart_action: detachable PROCEDURE
+	ctrl_shift_esc_action: detachable PROCEDURE [BOOLEAN]
+	quiet: BOOLEAN
+			-- Set while the window itself moves a control, so no handler runs.
+
+	admin_clicked
+		do
+			if attached restart_action as al_action then
+				al_action.call (Void)
+			end
+		end
+
+	ctrl_shift_esc_changed
+		do
+			if not quiet and attached ctrl_shift_esc_action as al_action then
+				al_action.call ([ctrl_shift_esc.is_on])
+			end
+		end
 	note_label: SW_LABEL
 	on_change: detachable PROCEDURE
 
