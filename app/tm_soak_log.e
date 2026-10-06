@@ -76,6 +76,12 @@ feature -- Element change
 			end
 		end
 
+	note_stall (a_ms: INTEGER; a_parts: READABLE_STRING_32)
+			-- A tick took `a_ms'; `a_parts' says how long each part took. Logged at once, with its time.
+		do
+			write ({STRING_32} "stall: tick " + a_ms.out.to_string_32 + {STRING_32} " ms (" + a_parts + {STRING_32} ")")
+		end
+
 	note_tick (a_ms: INTEGER)
 			-- The window's tick handler (collect, decode, rebuild the views) took `a_ms'.
 		do

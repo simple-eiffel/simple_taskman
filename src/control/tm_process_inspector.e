@@ -264,10 +264,20 @@ feature {NONE} -- Externals
 
 	c_user_and_elevation (a_handle, a_buffer: POINTER; a_capacity: INTEGER; a_flags: POINTER): INTEGER
 			-- DOMAIN\user of the process token into `a_buffer' and its elevation into `a_flags'; length, -5 denied, -1 otherwise.
+			-- Names are resolved on this machine only (LookupAccountSidLocalW: LookupAccountSidW can wait
+			-- seconds on the network, which froze the window once, 2026-10-06) and remembered per SID.
+			-- Called on one processor only (the window's), so the cache needs no lock.
 		external
 			"C inline use <windows.h>"
 		alias
 			"[
+				typedef BOOL (WINAPI *tm_lookup) (PSID, LPWSTR, LPDWORD, LPWSTR, LPDWORD, PSID_NAME_USE);
+				static tm_lookup l_local = NULL;
+				static int l_tried = 0;
+				static BYTE l_sids [64][68];
+				static WCHAR l_names [64][160];
+				static int l_lengths [64];
+				static int l_used = 0;
 				HANDLE l_token;
 				BYTE l_info [256];
 				DWORD l_size = 0;
@@ -275,7 +285,9 @@ feature {NONE} -- Externals
 				WCHAR l_name [256], l_domain [256];
 				DWORD l_name_size = 256, l_domain_size = 256;
 				SID_NAME_USE l_use;
-				int l_count;
+				PSID l_sid;
+				BOOL l_found;
+				int l_count, i;
 				if (!OpenProcessToken ((HANDLE) $a_handle, TOKEN_QUERY, &l_token)) return (GetLastError () == ERROR_ACCESS_DENIED) ? -5 : -1;
 				if (!GetTokenInformation (l_token, TokenUser, l_info, sizeof (l_info), &l_size)) { CloseHandle (l_token); return -1; }
 				*((int *) $a_flags) = 0;
@@ -283,12 +295,35 @@ feature {NONE} -- Externals
 					*((int *) $a_flags) = (int) l_elevation.TokenIsElevated;
 				}
 				CloseHandle (l_token);
-				if (!LookupAccountSidW (NULL, ((TOKEN_USER *) l_info)->User.Sid, l_name, &l_name_size, l_domain, &l_domain_size, &l_use)) return -1;
+				l_sid = ((TOKEN_USER *) l_info)->User.Sid;
+				for (i = 0; i < l_used; i++) {
+					if (EqualSid (l_sid, (PSID) l_sids [i])) {
+						if (l_lengths [i] > $a_capacity) return -1;
+						memcpy ((void *) $a_buffer, l_names [i], l_lengths [i] * 2);
+						return (EIF_INTEGER) l_lengths [i];
+					}
+				}
+				if (!l_tried) {
+					l_local = (tm_lookup) GetProcAddress (GetModuleHandleW (L"advapi32.dll"), "LookupAccountSidLocalW");
+					l_tried = 1;
+				}
+				if (l_local != NULL) {
+					l_found = l_local (l_sid, l_name, &l_name_size, l_domain, &l_domain_size, &l_use);
+				} else {
+					l_found = LookupAccountSidW (NULL, l_sid, l_name, &l_name_size, l_domain, &l_domain_size, &l_use);
+				}
+				if (!l_found) return -1;
 				l_count = (int) (l_domain_size + 1 + l_name_size);
 				if (l_count > $a_capacity) return -1;
 				memcpy ((void *) $a_buffer, l_domain, l_domain_size * 2);
 				((WCHAR *) $a_buffer) [l_domain_size] = L'\\';
 				memcpy (((WCHAR *) $a_buffer) + l_domain_size + 1, l_name, l_name_size * 2);
+				if (l_used < 64 && l_count <= 160 && GetLengthSid (l_sid) <= 68) {
+					CopySid (68, (PSID) l_sids [l_used], l_sid);
+					memcpy (l_names [l_used], (void *) $a_buffer, l_count * 2);
+					l_lengths [l_used] = l_count;
+					l_used++;
+				}
 				return (EIF_INTEGER) l_count;
 			]"
 		end

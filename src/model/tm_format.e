@@ -30,7 +30,9 @@ feature -- Readings
 			finite: not (a_value.is_nan or a_value.is_positive_infinity or a_value.is_negative_infinity)
 			unit_given: not a_unit.is_empty
 		do
-			if a_unit.same_string ("B") then
+			if a_unit.same_string ("#") then
+				Result := rounded_count (a_value).out.to_string_32
+			elseif a_unit.same_string ("B") then
 				Result := bytes (rounded_count (a_value))
 			elseif a_unit.same_string ("B/s") then
 				Result := bytes_per_second (a_value.max (0.0))
@@ -43,7 +45,7 @@ feature -- Readings
 			end
 		ensure
 			not_empty: not Result.is_empty
-			ends_with_unit: Result.ends_with (a_unit.to_string_32)
+			ends_with_unit: not a_unit.same_string ("#") implies Result.ends_with (a_unit.to_string_32)
 		end
 
 feature -- Process columns

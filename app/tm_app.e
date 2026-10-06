@@ -53,6 +53,9 @@ feature {NONE} -- Initialization
 			create windows.make
 			create details_view.make
 			create actions_bar.make
+			create machine.make
+			create performance_view.make (machine, Main_page_height)
+			create main_tabs.make
 			create side_tabs.make
 			create l_details_scroll.make (Side_page_height)
 			l_details_scroll.set_child (details_view.group)
@@ -113,11 +116,21 @@ feature {NONE} -- Layout
 			create l_split.make (l_main, l_side)
 			l_split.set_ratio (0.66)
 			l_split.set_grow (1.0)
+			main_tabs.add_page ("Processes", l_split)
+			main_tabs.add_page ("Performance", performance_view.page)
+			main_tabs.set_grow (1.0)
+			if attached start_page as al_page then
+				across main_tabs.labels as ic loop
+					if ic.as_lower.same_string (al_page) then
+						main_tabs.select_tab (@ic.cursor_index)
+					end
+				end
+			end
 			create Result.make
 			Result := Result.with_padding (10.0).with_gap (8.0)
 			Result.put (l_tiles)
 			Result.put (scrub_view.row)
-			Result.put (l_split)
+			Result.put (main_tabs)
 			Result.put (status_bar)
 		end
 
@@ -156,6 +169,7 @@ feature {NONE} -- Tick
 			-- Take the newest frame, if any, and show it; end a soak run on time.
 		local
 			l_text: detachable STRING_8
+			l_frame_ms, l_selection_ms, l_history_ms, l_mark, l_total_ms: INTEGER_64
 		do
 			soak.note_render (window.last_render_ms)
 			if window.last_render_ms > 0 then
@@ -189,16 +203,27 @@ feature {NONE} -- Tick
 					status_bar.set_left ({STRING_32} "Sampling stopped: " + al_failure)
 				end
 			end
+			l_mark := clock.monotonic_ticks
+			l_frame_ms := (l_mark - tick_start) // 10_000
 			actions_bar.disarm_if_late
 			if replay_path.is_empty then
 				follow_selection
 			end
+			l_selection_ms := (clock.monotonic_ticks - l_mark) // 10_000
+			l_mark := clock.monotonic_ticks
 			ticks_since_refresh := ticks_since_refresh + 1
 			if ticks_since_refresh >= Refresh_ticks then
 				ticks_since_refresh := 0
 				refresh_history
 			end
-			soak.note_tick (((clock.monotonic_ticks - tick_start) // 10_000).to_integer_32)
+			l_history_ms := (clock.monotonic_ticks - l_mark) // 10_000
+			l_total_ms := (clock.monotonic_ticks - tick_start) // 10_000
+			if l_total_ms >= Stall_ms then
+				soak.note_stall (l_total_ms.to_integer_32, {STRING_32} "frame " + l_frame_ms.out.to_string_32
+					+ {STRING_32} " ms, windows and selection " + l_selection_ms.out.to_string_32
+					+ {STRING_32} " ms, history " + l_history_ms.out.to_string_32 + {STRING_32} " ms")
+			end
+			soak.note_tick (l_total_ms.to_integer_32)
 			if soak_seconds > 0 and then clock.monotonic_ticks - started >= soak_seconds.to_integer_64 * 10_000_000 then
 				soak_seconds := 0
 				if attached slot as al_slot then
@@ -215,6 +240,9 @@ feature {NONE} -- Tick
 			l_left, l_right: STRING_32
 		do
 			last_live_frame := a_frame
+			if replay_path.is_empty then
+				performance_view.show (a_frame)
+			end
 			if not scrub_view.is_scrubbing then
 				process_view.show (a_frame)
 				core_view.show (a_frame.readings)
@@ -452,6 +480,17 @@ feature {NONE} -- Process actions (Phase 3)
 	actions_bar: TM_ACTIONS_BAR
 	side_tabs: SW_TABS
 
+	main_tabs: SW_TABS
+			-- Processes, Performance, and the other Task Manager pages.
+
+	machine: TM_MACHINE_INFO
+			-- Facts about this machine (Performance tab).
+
+	performance_view: TM_PERFORMANCE_VIEW
+
+	Main_page_height: REAL_64 = 520.0
+			-- Height of a full-width page under the main tabs in an 820-pixel window.
+
 	shown_selection: detachable TM_PROCESS_ID
 			-- Identity the details panel shows.
 
@@ -463,7 +502,7 @@ feature {NONE} -- Process actions (Phase 3)
 
 	ticks_since_windows: INTEGER
 
-	Side_page_height: REAL_64 = 290.0
+	Side_page_height: REAL_64 = 250.0
 			-- Viewport of each side tab: the heatmap, the tabs, and the status bar fit an 820-pixel window.
 
 	Windows_ticks: INTEGER = 8
@@ -684,6 +723,8 @@ feature {NONE} -- Arguments
 					i := i + 1
 				elseif argument (i).same_string ({STRING_32} "--no-record") then
 					no_record := True
+				elseif argument (i).same_string ({STRING_32} "--page") and i < argument_count then
+					start_page := argument (i + 1).as_lower
 				elseif argument (i).same_string ({STRING_32} "--tier0-seconds") and i < argument_count and then argument (i + 1).is_integer then
 					tier0_seconds := argument (i + 1).to_integer.max (10).min (86_400)
 				elseif argument (i).same_string ({STRING_32} "--select") and i < argument_count and then argument (i + 1).is_integer_64 then
@@ -756,6 +797,9 @@ feature {NONE} -- Implementation
 	no_record: BOOLEAN
 			-- `--no-record': sample without recording.
 
+	start_page: detachable STRING_32
+			-- `--page NAME': open on that main tab (processes, performance, ...).
+
 	tier0_seconds: INTEGER
 			-- `--tier0-seconds N' (measurement aid): 1 s frames merge after N seconds; 0 for an hour.
 
@@ -776,6 +820,9 @@ feature {NONE} -- Implementation
 		end
 
 	Interval_ms: INTEGER = 1000
+
+	Stall_ms: INTEGER = 500
+			-- A tick this long is logged with its parts (soak runs).
 			-- Sampling interval.
 
 	Cpu_headline: INTEGER

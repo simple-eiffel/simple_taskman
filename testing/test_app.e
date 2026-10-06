@@ -46,6 +46,7 @@ feature {NONE} -- Initialization
 			run_recorder_tests
 			run_harden_recorder_tests
 			run_control_tests
+			run_performance_tests
 			run_acceptance_tests
 			say ("%N========================%N")
 			say ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
@@ -460,6 +461,18 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_out_of_order_append_is_refused, "out_of_order_append_is_refused")
 			run_test (agent t.test_bad_policies_are_refused, "bad_policies_are_refused")
 			run_test (agent t.test_two_hours_of_frames_retain_in_time, "two_hours_of_frames_retain_in_time")
+		end
+
+	run_performance_tests
+		local
+			t: TEST_PERFORMANCE
+		do
+			section ("phase 3: performance measurements")
+			create t
+			run_test (agent t.test_machine_facts, "machine_facts")
+			run_test (agent t.test_new_counters_read_live, "new_counters_read_live")
+			run_test (agent t.test_gpu_engines_or_reason, "gpu_engines_or_reason")
+			run_test (agent t.test_counts_format_as_whole_numbers, "counts_format_as_whole_numbers")
 		end
 
 	run_control_tests

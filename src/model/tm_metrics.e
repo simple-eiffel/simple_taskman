@@ -44,6 +44,19 @@ feature {NONE} -- Initialization
 			add (Self_cpu_pct, "self.cpu_pct", "%%", {STRING_32} "taskman CPU", 0.0, 110_000.0, False, False)
 			add (Self_private_bytes, "self.private_bytes", "B", {STRING_32} "taskman memory", 0.0, Two_to_50, False, False)
 			add (Sample_cost_ms, "self.sample_cost_ms", "ms", {STRING_32} "Sample cost", 0.0, 60_000.0, False, True)
+				-- Phase 3 (Performance tab)
+			add (Cpu_kernel_pct, "cpu.kernel_pct", "%%", {STRING_32} "CPU kernel time", 0.0, 100.0, False, False)
+			add (Cpu_performance_pct, "cpu.performance_pct", "%%", {STRING_32} "CPU speed (percent of base)", 0.0, 400.0, False, False)
+			add (Mem_cached_bytes, "mem.cached_bytes", "B", {STRING_32} "Cached", 0.0, Two_to_50, False, False)
+			add (Mem_paged_pool_bytes, "mem.paged_pool_bytes", "B", {STRING_32} "Paged pool", 0.0, Two_to_50, False, False)
+			add (Mem_nonpaged_pool_bytes, "mem.nonpaged_pool_bytes", "B", {STRING_32} "Non-paged pool", 0.0, Two_to_50, False, False)
+			add (Sys_processes, "sys.processes", "#", {STRING_32} "Processes", 0.0, 1_000_000.0, False, False)
+			add (Sys_threads, "sys.threads", "#", {STRING_32} "Threads", 0.0, 100_000_000.0, False, False)
+			add (Sys_handles, "sys.handles", "#", {STRING_32} "Handles", 0.0, 1_000_000_000.0, False, False)
+			add (Disk_response_ms, "disk.response_ms", "ms", {STRING_32} "Disk response time", 0.0, 600_000.0, True, False)
+			add (Net_send_bps, "net.send_bps", "B/s", {STRING_32} "Network send", 0.0, 1_000_000_000_000.0, True, False)
+			add (Net_receive_bps, "net.receive_bps", "B/s", {STRING_32} "Network receive", 0.0, 1_000_000_000_000.0, True, False)
+			add (Gpu_shared_bytes, "gpu.shared_bytes", "B", {STRING_32} "GPU shared memory", 0.0, Two_to_50, True, False)
 		ensure
 			complete: count = Last_code
 		end
@@ -73,8 +86,20 @@ feature -- Codes
 	Self_cpu_pct: INTEGER = 21
 	Self_private_bytes: INTEGER = 22
 	Sample_cost_ms: INTEGER = 23
+	Cpu_kernel_pct: INTEGER = 24
+	Cpu_performance_pct: INTEGER = 25
+	Mem_cached_bytes: INTEGER = 26
+	Mem_paged_pool_bytes: INTEGER = 27
+	Mem_nonpaged_pool_bytes: INTEGER = 28
+	Sys_processes: INTEGER = 29
+	Sys_threads: INTEGER = 30
+	Sys_handles: INTEGER = 31
+	Disk_response_ms: INTEGER = 32
+	Net_send_bps: INTEGER = 33
+	Net_receive_bps: INTEGER = 34
+	Gpu_shared_bytes: INTEGER = 35
 
-	Last_code: INTEGER = 23
+	Last_code: INTEGER = 35
 			-- Highest code; codes run 1..Last_code with no holes.
 
 feature -- Access

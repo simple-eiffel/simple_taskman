@@ -90,6 +90,15 @@ feature -- Basic operations
 				-- busy = 100 - idle; "% Disk Time" exceeds 100 and is not used
 			put_instances (l_readings, {TM_METRICS}.Temperature_c, thermal_counter, 0.1, -273.15)
 				-- tenths of a kelvin
+			put_total (l_readings, {TM_METRICS}.Cpu_kernel_pct, kernel_counter, 1.0, 0.0)
+			put_total (l_readings, {TM_METRICS}.Cpu_performance_pct, performance_counter, 1.0, 0.0)
+			put_instances (l_readings, {TM_METRICS}.Disk_response_ms, disk_response_counter, 1000.0, 0.0)
+				-- seconds a transfer, shown in milliseconds
+			put_instances (l_readings, {TM_METRICS}.Net_send_bps, net_send_counter, 1.0, 0.0)
+			put_instances (l_readings, {TM_METRICS}.Net_receive_bps, net_receive_counter, 1.0, 0.0)
+			put_gpu_engines (l_readings)
+			put_gpu_memory (l_readings, {TM_METRICS}.Gpu_dedicated_bytes, gpu_dedicated_counter)
+			put_gpu_memory (l_readings, {TM_METRICS}.Gpu_shared_bytes, gpu_shared_counter)
 			put_memory (l_readings)
 			put_volumes (l_readings)
 			across metrics.codes as ic loop
@@ -128,6 +137,8 @@ feature {NONE} -- Implementation
 	busy_counter, core_counter, utility_counter, faults_counter: INTEGER
 	disk_read_counter, disk_write_counter, disk_idle_counter: INTEGER
 	power_counter, thermal_counter: INTEGER
+	kernel_counter, performance_counter, disk_response_counter, net_send_counter, net_receive_counter: INTEGER
+	gpu_engine_counter, gpu_dedicated_counter, gpu_shared_counter: INTEGER
 			-- Counter indexes in `query'; 0 when the counter was refused.
 
 	package_instance: STRING_32
@@ -147,6 +158,14 @@ feature {NONE} -- Implementation
 			disk_idle_counter := query.add_english ("\PhysicalDisk(*)\%% Idle Time")
 			power_counter := query.add_english ("\Energy Meter(*)\Power")
 			thermal_counter := query.add_english ("\Thermal Zone Information(*)\High Precision Temperature")
+			kernel_counter := query.add_english ("\Processor Information(_Total)\%% Privileged Time")
+			performance_counter := query.add_english_uncapped ("\Processor Information(_Total)\%% Processor Performance")
+			disk_response_counter := query.add_english ("\PhysicalDisk(*)\Avg. Disk sec/Transfer")
+			net_send_counter := query.add_english ("\Network Interface(*)\Bytes Sent/sec")
+			net_receive_counter := query.add_english ("\Network Interface(*)\Bytes Received/sec")
+			gpu_engine_counter := query.add_english_uncapped ("\GPU Engine(*)\Utilization Percentage")
+			gpu_dedicated_counter := query.add_english ("\GPU Adapter Memory(*)\Dedicated Usage")
+			gpu_shared_counter := query.add_english ("\GPU Adapter Memory(*)\Shared Usage")
 			if query.counter_count > 0 then
 					-- Two collections, so rate counters have data before the first refresh.
 				query.collect
@@ -161,10 +180,20 @@ feature {NONE} -- Implementation
 			decide_counter ({TM_METRICS}.Disk_read_bps, disk_read_counter)
 			decide_counter ({TM_METRICS}.Disk_write_bps, disk_write_counter)
 			decide_counter ({TM_METRICS}.Disk_busy_pct, disk_idle_counter)
+			decide_counter ({TM_METRICS}.Cpu_kernel_pct, kernel_counter)
+			decide_counter ({TM_METRICS}.Cpu_performance_pct, performance_counter)
+			decide_counter ({TM_METRICS}.Disk_response_ms, disk_response_counter)
+			decide_counter ({TM_METRICS}.Net_send_bps, net_send_counter)
+			decide_counter ({TM_METRICS}.Net_receive_bps, net_receive_counter)
+			decide_counter ({TM_METRICS}.Gpu_busy_pct, gpu_engine_counter)
+			decide_counter ({TM_METRICS}.Gpu_dedicated_bytes, gpu_dedicated_counter)
+			decide_counter ({TM_METRICS}.Gpu_shared_bytes, gpu_shared_counter)
 			decide_package_power
 			decide_temperature
 			across <<{TM_METRICS}.Mem_used_bytes, {TM_METRICS}.Mem_available_bytes, {TM_METRICS}.Mem_commit_bytes,
-					{TM_METRICS}.Mem_commit_limit_bytes, {TM_METRICS}.Mem_commit_pct>> as ic loop
+					{TM_METRICS}.Mem_commit_limit_bytes, {TM_METRICS}.Mem_commit_pct,
+					{TM_METRICS}.Mem_cached_bytes, {TM_METRICS}.Mem_paged_pool_bytes, {TM_METRICS}.Mem_nonpaged_pool_bytes,
+					{TM_METRICS}.Sys_processes, {TM_METRICS}.Sys_threads, {TM_METRICS}.Sys_handles>> as ic loop
 				support.force ({TM_READING_STATUS}.Available, ic)
 			end
 			if fixed_drive_count > 0 then
@@ -172,8 +201,6 @@ feature {NONE} -- Implementation
 			else
 				refuse ({TM_METRICS}.Volume_free_bytes, {STRING_32} "no fixed drive")
 			end
-			refuse ({TM_METRICS}.Gpu_busy_pct, {STRING_32} "GPU counters are not read in Phase 1")
-			refuse ({TM_METRICS}.Gpu_dedicated_bytes, {STRING_32} "GPU counters are not read in Phase 1")
 			if c_has_battery then
 				refuse ({TM_METRICS}.Battery_pct, {STRING_32} "battery reading arrives in a later phase")
 				refuse ({TM_METRICS}.Battery_drain_watts, {STRING_32} "battery reading arrives in a later phase")
@@ -236,6 +263,52 @@ feature {NONE} -- Implementation
 		end
 
 feature {NONE} -- Reading counters
+
+	put_gpu_engines (a_readings: TM_READINGS)
+			-- GPU busy per engine type ("3D", "Copy", "VideoDecode", ...): the GPU Engine counter has one
+			-- instance per process and engine (pid_1234_luid_..._engtype_3D); a type's busy is their sum,
+			-- capped at 100 as Task Manager does.
+		local
+			l_sums: HASH_TABLE [REAL_64, STRING_32]
+			l_order: ARRAYED_LIST [STRING_32]
+			l_type: STRING_32
+			l_cut: INTEGER
+		do
+			if support_of ({TM_METRICS}.Gpu_busy_pct) = {TM_READING_STATUS}.Available and gpu_engine_counter > 0 then
+				create l_sums.make (8)
+				create l_order.make (8)
+				across query.values (gpu_engine_counter) as ic loop
+					l_cut := ic.instance.substring_index ({STRING_32} "engtype_", 1)
+					if l_cut > 0 and then ic.is_valid then
+						l_type := ic.instance.substring (l_cut + 8, ic.instance.count)
+						if not l_type.is_empty then
+							if not l_sums.has (l_type) then
+								l_order.extend (l_type)
+							end
+							l_sums.force (l_sums.item (l_type) + ic.value.max (0.0), l_type)
+						end
+					end
+				end
+				across l_order as ic loop
+					a_readings.put ({TM_METRICS}.Gpu_busy_pct, ic, measured ({TM_METRICS}.Gpu_busy_pct, l_sums.item (ic).min (100.0)))
+				end
+			end
+		end
+
+	put_gpu_memory (a_readings: TM_READINGS; a_code, a_counter: INTEGER)
+			-- GPU memory in use per adapter, named "GPU 0", "GPU 1" in the counter's order.
+		local
+			l_index: INTEGER
+		do
+			if support_of (a_code) = {TM_READING_STATUS}.Available and a_counter > 0 then
+				across query.values (a_counter) as ic loop
+					if not ic.instance.is_empty and then not ic.instance.same_string ({STRING_32} "_Total") then
+						a_readings.put (a_code, {STRING_32} "GPU " + l_index.out.to_string_32, counter_reading (a_code, ic, 1.0, 0.0))
+						l_index := l_index + 1
+					end
+				end
+			end
+		end
 
 	put_total (a_readings: TM_READINGS; a_code, a_counter: INTEGER; a_scale, a_offset: REAL_64)
 			-- The single value of system-wide metric `a_code': the "_Total" instance, the
@@ -300,7 +373,7 @@ feature {NONE} -- Reading counters
 			l_buffer: MANAGED_POINTER
 			l_total, l_available, l_commit, l_limit: INTEGER_64
 		do
-			create l_buffer.make (32)
+			create l_buffer.make (80)
 			if c_memory (l_buffer.item) then
 				l_total := l_buffer.read_integer_64 (0)
 				l_available := l_buffer.read_integer_64 (8)
@@ -314,6 +387,12 @@ feature {NONE} -- Reading counters
 					a_readings.put ({TM_METRICS}.Mem_commit_pct, {STRING_32} "",
 						measured ({TM_METRICS}.Mem_commit_pct, l_commit.to_double * 100.0 / l_limit.to_double))
 				end
+				a_readings.put ({TM_METRICS}.Mem_cached_bytes, {STRING_32} "", measured ({TM_METRICS}.Mem_cached_bytes, l_buffer.read_integer_64 (32).to_double))
+				a_readings.put ({TM_METRICS}.Mem_paged_pool_bytes, {STRING_32} "", measured ({TM_METRICS}.Mem_paged_pool_bytes, l_buffer.read_integer_64 (40).to_double))
+				a_readings.put ({TM_METRICS}.Mem_nonpaged_pool_bytes, {STRING_32} "", measured ({TM_METRICS}.Mem_nonpaged_pool_bytes, l_buffer.read_integer_64 (48).to_double))
+				a_readings.put ({TM_METRICS}.Sys_processes, {STRING_32} "", measured ({TM_METRICS}.Sys_processes, l_buffer.read_integer_64 (56).to_double))
+				a_readings.put ({TM_METRICS}.Sys_threads, {STRING_32} "", measured ({TM_METRICS}.Sys_threads, l_buffer.read_integer_64 (64).to_double))
+				a_readings.put ({TM_METRICS}.Sys_handles, {STRING_32} "", measured ({TM_METRICS}.Sys_handles, l_buffer.read_integer_64 (72).to_double))
 			end
 		end
 
@@ -388,7 +467,8 @@ feature {NONE} -- Reading counters
 feature {NONE} -- Externals
 
 	c_memory (a_out: POINTER): BOOLEAN
-			-- Total and available physical bytes, commit total and limit in bytes.
+			-- Total and available physical bytes, commit total and limit, cache, paged and non-paged pool
+			-- (bytes); process, thread, and handle counts.
 		external
 			"C inline use <windows.h>, <psapi.h>"
 		alias
@@ -407,6 +487,12 @@ feature {NONE} -- Externals
 				l_out [1] = (EIF_INTEGER_64) l_status.ullAvailPhys;
 				l_out [2] = (EIF_INTEGER_64) l_performance.CommitTotal * (EIF_INTEGER_64) l_performance.PageSize;
 				l_out [3] = (EIF_INTEGER_64) l_performance.CommitLimit * (EIF_INTEGER_64) l_performance.PageSize;
+				l_out [4] = (EIF_INTEGER_64) l_performance.SystemCache * (EIF_INTEGER_64) l_performance.PageSize;
+				l_out [5] = (EIF_INTEGER_64) l_performance.KernelPaged * (EIF_INTEGER_64) l_performance.PageSize;
+				l_out [6] = (EIF_INTEGER_64) l_performance.KernelNonpaged * (EIF_INTEGER_64) l_performance.PageSize;
+				l_out [7] = (EIF_INTEGER_64) l_performance.ProcessCount;
+				l_out [8] = (EIF_INTEGER_64) l_performance.ThreadCount;
+				l_out [9] = (EIF_INTEGER_64) l_performance.HandleCount;
 				return EIF_TRUE;
 			]"
 		end
