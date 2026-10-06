@@ -333,9 +333,11 @@ feature {NONE} -- Database
 		end
 
 	release_database
-			-- Disconnect.
+			-- Disconnect; a failure while closing is not raised (the connection is dropped either way).
+		local
+			l_failed: BOOLEAN
 		do
-			if attached database as al_db then
+			if not l_failed and then attached database as al_db then
 				al_db.close
 			end
 			database := Void
@@ -344,6 +346,9 @@ feature {NONE} -- Database
 			pending := 0
 		ensure
 			closed: not is_open and not is_writable and pending = 0
+		rescue
+			l_failed := True
+			retry
 		end
 
 	prepare_schema (a_new, a_writer: BOOLEAN)
@@ -441,45 +446,91 @@ feature {NONE} -- Database
 			-- Open the batch transaction when none is open.
 		require
 			writable: is_writable
+		local
+			l_failed: BOOLEAN
 		do
-			if not db.is_in_transaction then
+			if not l_failed and then not db.is_in_transaction then
 				db.begin_transaction
 				note_error ("BEGIN")
 			end
+		rescue
+			l_failed := True
+			note_exception ("BEGIN")
+			retry
 		end
 
 	commit_now
 			-- Commit the batch, if one is open.
 		require
 			writable: is_writable
+		local
+			l_failed: BOOLEAN
 		do
-			if db.is_in_transaction then
+			if not l_failed and then db.is_in_transaction then
 				db.commit
 				note_error ("COMMIT")
 			end
 			pending := 0
 		ensure
 			nothing_pending: pending = 0
+		rescue
+			l_failed := True
+			note_exception ("COMMIT")
+			retry
 		end
 
 	exec (a_sql: READABLE_STRING_8)
-			-- Run `a_sql' unless an earlier step of this operation failed.
+			-- Run `a_sql' unless an earlier step of this operation failed. simple_sql re-raises
+			-- SQL failures (no such table, not a database); here they become `last_error'.
 		require
 			open: is_open
+		local
+			l_failed: BOOLEAN
 		do
-			if last_error.is_empty then
+			if not l_failed and then last_error.is_empty then
 				db.perform (a_sql)
 				note_error (a_sql)
 			end
+		rescue
+			l_failed := True
+			note_exception (a_sql)
+			retry
 		end
 
 	rows (a_sql: READABLE_STRING_8): SIMPLE_SQL_RESULT
 			-- Rows of query `a_sql'; empty, with `last_error' set, when it fails.
 		require
 			open: is_open
+		local
+			l_failed: BOOLEAN
 		do
-			Result := db.run_query (a_sql)
-			note_error (a_sql)
+			if l_failed then
+				create Result.make_empty
+			else
+				Result := db.run_query (a_sql)
+				note_error (a_sql)
+			end
+		rescue
+			l_failed := True
+			note_exception (a_sql)
+			retry
+		end
+
+	note_exception (a_sql: READABLE_STRING_8)
+			-- Record the exception being rescued while running `a_sql'.
+		do
+			if last_error.is_empty then
+				last_error.append ({STRING_32} "SQLite: ")
+				if attached (create {EXCEPTION_MANAGER_FACTORY}).exception_manager.last_exception as al_exception
+						and then attached al_exception.description as al_text then
+					last_error.append (al_text.to_string_32)
+				else
+					last_error.append ({STRING_32} "failed")
+				end
+				last_error.append ({STRING_32} " [" + a_sql.substring (1, a_sql.count.min (60)).to_string_32 + {STRING_32} "]")
+			end
+		ensure
+			said_why: not last_error.is_empty
 		end
 
 	pragma_value (a_name: READABLE_STRING_8): INTEGER_64

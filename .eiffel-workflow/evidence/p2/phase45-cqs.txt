@@ -1,0 +1,16 @@
+# Phase 2 (Remember) - Phase 4.5: CQS audit of the new classes
+# Date: 2026-10-06
+
+Pure queries: TM_RETENTION_POLICY (all), TM_FRAME_MERGER.reduced/merged (build new frames only),
+TM_RETENTION_PLANNER.groups, TM_TRACE_ENTRY, TM_MERGE_GROUP.is_move_only, TM_LOCAL_TIME.text,
+TM_SCRUB_VIEW.clock_time, TM_MEMORY_TRACE_STORE.window/frame_nearest/entries.
+
+Whitelisted (rule 4, error state documented in the postcondition):
+  TM_SQLITE_TRACE_STORE.window, frame_nearest, entries, size_bytes, process_row_count set last_error when
+  SQLite or the payload fails (frame_nearest: said_why). payload_of/inflated also update the compressor's
+  own size counters (simple_compression), invisible to clients.
+Whitelisted (fluent): SIMPLE_TASKMAN.attach_store returns Current.
+Commands: append, flush, apply_retention, pin, close, refresh, release, set_span, scrub_to, show_history, show_live.
+
+Violations: 0
+# Status: PASS

@@ -1,0 +1,49 @@
+# Phase 2 (Remember) - Phase 5: verification
+# Date: 2026-10-06 13:19  F_code test binary, contracts kept
+
+-- phase 2: recorder --
+  PASS: policy_defaults
+  PASS: policy_significance
+  PASS: policy_buckets
+  PASS: reduce_keeps_significant_only
+  PASS: reduce_skips_large_quiet_between_passes
+  PASS: reduce_caps_and_counts_omitted
+  PASS: reduce_picks_from_each_ranking
+  PASS: merge_weighted_mean
+  PASS: merge_peak_takes_max
+  PASS: merge_never_available_keeps_reason
+  PASS: merge_partly_available_uses_measured_time_only
+  PASS: merge_process_rates_and_memory
+  PASS: merge_flags
+  PASS: planner_groups_by_bucket
+  PASS: planner_breaks_at_pin_and_gap
+  PASS: planner_ignores_young_frames
+  PASS: memory_store_append_window_nearest
+  PASS: memory_store_retention_merges_old_frames
+  PASS: memory_store_retention_runs_all_tiers
+  PASS: memory_store_pinned_frames_survive
+  PASS: sqlite_round_trip
+  PASS: sqlite_keeps_non_ascii_names
+  PASS: sqlite_reader_sees_committed_frames_only
+  PASS: sqlite_writer_reopens_and_continues
+  PASS: sqlite_retention_matches_memory
+  PASS: sqlite_size_cap_deletes_oldest
+  PASS: sqlite_schema_refuses_a_fake_zero
+  PASS: sqlite_reader_of_missing_file_says_why
+  PASS: facade_records_each_new_frame
+  PASS: facade_skips_frames_out_of_order
+  PASS: trace_command_describes_a_recording
+  PASS: trace_command_without_a_recording_exits_3
+  PASS: single_writer_second_is_refused
+  PASS: single_writer_release_lets_the_next_in
+
+
+Results: 234 passed, 0 failed
+ALL TESTS PASSED
+
+Postconditions with a test each: reduce (bounded, only_significant, omitted_counted), merge (weighted mean,
+peak, never-available reason, measured-time-only mean, rates/latest memory, flags), planner (buckets, breaks,
+age), stores (append/window/nearest, retention tiers 0-1-2, pins, cap, reopen, commit visibility, non-ASCII,
+CHECK refuses fake zero), facade (records each frame, skips out of order, close closes store), CLI trace.
+
+# Status: PASS

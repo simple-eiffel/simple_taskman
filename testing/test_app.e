@@ -44,6 +44,7 @@ feature {NONE} -- Initialization
 			run_harden_scoop_tests
 			run_target_tests
 			run_recorder_tests
+			run_harden_recorder_tests
 			run_acceptance_tests
 			say ("%N========================%N")
 			say ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
@@ -441,6 +442,23 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_trace_command_without_a_recording_exits_3, "trace_command_without_a_recording_exits_3")
 			run_test (agent t.test_single_writer_second_is_refused, "single_writer_second_is_refused")
 			run_test (agent t.test_single_writer_release_lets_the_next_in, "single_writer_release_lets_the_next_in")
+		end
+
+	run_harden_recorder_tests
+		local
+			t: TEST_HARDEN_RECORDER
+		do
+			section ("phase 6 hardening: recorder")
+			create t
+			run_test (agent t.test_damaged_payload_is_skipped_with_a_reason, "damaged_payload_is_skipped_with_a_reason")
+			run_test (agent t.test_newer_format_is_refused, "newer_format_is_refused")
+			run_test (agent t.test_a_database_that_is_not_a_recording_is_refused, "a_database_that_is_not_a_recording_is_refused")
+			run_test (agent t.test_a_text_file_is_refused, "a_text_file_is_refused")
+			run_test (agent t.test_gap_frames_move_alone_in_both_stores, "gap_frames_move_alone_in_both_stores")
+			run_test (agent t.test_pinned_frames_survive_the_size_cap, "pinned_frames_survive_the_size_cap")
+			run_test (agent t.test_out_of_order_append_is_refused, "out_of_order_append_is_refused")
+			run_test (agent t.test_bad_policies_are_refused, "bad_policies_are_refused")
+			run_test (agent t.test_two_hours_of_frames_retain_in_time, "two_hours_of_frames_retain_in_time")
 		end
 
 	run_acceptance_tests

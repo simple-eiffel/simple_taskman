@@ -113,13 +113,17 @@ feature {NONE} -- Frame source
 				create l_worker.make (Interval_ms, store_path)
 				attach_worker (l_worker, a_slot)
 				launch_worker (l_worker)
-				soak.start ("live", core_view.rows * core_view.columns)
+				if soak_seconds > 0 then
+					soak.start ("live", core_view.rows * core_view.columns)
+				end
 			else
 				capability_view.show_replay (replay_path)
 				create l_replayer.make (replay_path, Interval_ms)
 				attach_replayer (l_replayer, a_slot)
 				launch_replayer (l_replayer)
-				soak.start ({STRING_32} "replay " + replay_path, core_view.rows * core_view.columns)
+				if soak_seconds > 0 then
+					soak.start ({STRING_32} "replay " + replay_path, core_view.rows * core_view.columns)
+				end
 			end
 		end
 
