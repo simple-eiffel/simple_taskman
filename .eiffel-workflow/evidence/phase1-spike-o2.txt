@@ -103,6 +103,27 @@ taskman_stress: cpu (N SCOOP spinners), memory (growth, every page touched),
   [x] Sampling at or under 1% over one hour (0.74%); whole-process CPU and render recorded
   [x] Scripted 5,000-process frame: render and tick times recorded
   [x] CLI snapshot and capabilities; stress CPU, memory, uncached disk, identity first
-  [ ] QPC during sleep (needs Larry to sleep the machine: taskman_cli clockwatch)
+  [x] QPC during sleep: keeps counting (S3, 2026-10-06; see below)
   [ ] Decision: CPU tile on "% Processor Time" (spec) or "% Processor Utility" (Task Manager)
   [ ] Upstream W-1 (sparkline gaps) before the P1 gate
+
+## QPC across sleep (2026-10-06, Larry slept the machine)
+  taskman_cli clockwatch --seconds 300, started 11:36:17, ended 11:41:18:
+    gap: both advanced 275.0 s together -> the monotonic counter KEPT COUNTING (sleep is a discontinuity)
+    gap: both advanced 6.6 s together -> the monotonic counter KEPT COUNTING (sleep is a discontinuity)
+    watched 300 s of monotonic time; jumps or gaps: 2
+  System log for the same window:
+    Kernel-Power 42  11:36:31  entering sleep (Application API)
+    Kernel-Power 130/131 firmware S3 times (a real S3 standby, not modern standby)
+    Power-Troubleshooter 1  Sleep Time 15:36:30.17Z  Wake Time 15:41:14.82Z  Wake Source: Power Button
+    Kernel-General 1  system time corrected +273,801 ms from the hardware clock at resume
+  300 s of monotonic time took 301 s of wall time across about 285 s of sleep,
+  so QueryPerformanceCounter advanced through S3 on this build.
+  Consequence: the addendum's main branch holds. A sleep arrives as a monotonic
+  gap (> Gap_factor x nominal) and TM_SAMPLER emits a discontinuity frame
+  (A-110); no rate spans the sleep. No code change needed.
+  Note: at resume Windows briefly holds the pre-sleep wall time, then steps it
+  forward. Clockwatch did not observe the stale window. If a sample ever lands
+  in it, the continuous timeline absorbs it (the offset grows, then shrinks back to 0),
+  and that frame is flagged as clock-adjusted. Two earlier attempts (11:21, 11:24)
+  did not sleep the machine (no Kernel-Power events) and are not counted.
