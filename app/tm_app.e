@@ -42,7 +42,7 @@ feature {NONE} -- Initialization
 			create self.make
 			create soak.make
 			create theme.make_dark
-			create window.make ("simple_taskman 0.2.0", 80, 60, 1280, 820, theme)
+			create window.make ("simple_taskman 0.3.0", 80, 60, 1280, 820, theme)
 			create process_view.make (self.id)
 			create core_view.make (machine_topology)
 			create cpu_tile.make ("CPU")
