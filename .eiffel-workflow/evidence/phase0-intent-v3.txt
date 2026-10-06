@@ -1,0 +1,20 @@
+# Phase 0 (revision): intent v3
+# Project: D:\prod\simple_taskman
+# Date: 2026-10-06
+
+Trigger: Larry, 2026-10-06 - full Task Manager replacement++ with new tools and
+"WOW" displays (past, present, predictable future).
+Proposal: https://claude.ai/artifact/1rtj2RUWrihGKXwu9ZA8ct
+Approval: Larry, 2026-10-06: "I am out. Do your best. I take your recommendations"
+  -> D-1 unelevated + restart-as-admin; D-2 scope lifts as recommended;
+     D-3 recorder first; D-4 window cost at or below Task Manager.
+
+D-4 measurement (JACKJACK, 2026-10-06 ~12:10-12:15, 120 x 1 s samples each,
+\Process(*)\% Processor Time and Private Bytes via Get-Counter, window visible):
+  Task Manager over 120 s: CPU avg 8.01% max 13.90% (of one logical processor); private 127.1 MB
+  taskman (lean) over 120 s: CPU avg 4.86% max 9.26% (of one logical processor); private 31.3 MB
+  taskman soak log for the same run: frames shown 132, dropped 0, render avg 15.9 ms,
+    sample cost avg 7.8 ms (0.8% of the interval), own CPU avg 4.7%
+
+Output: .eiffel-workflow/intent-v3.md
+Status: APPROVED (delegated)
