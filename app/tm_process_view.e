@@ -22,8 +22,8 @@ feature {NONE} -- Initialization
 			create rows.make (512)
 			create notice.make_empty
 			create grid.make (480.0)
-			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Name", 190.0, agent {TM_PROCESS_ROW}.name_text)).with_key (agent {TM_PROCESS_ROW}.name_key))
-			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Status", 110.0, agent {TM_PROCESS_ROW}.status_text)).with_key (agent {TM_PROCESS_ROW}.status_key))
+			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Name", 176.0, agent {TM_PROCESS_ROW}.name_text)).with_key (agent {TM_PROCESS_ROW}.name_key))
+			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Status", 96.0, agent {TM_PROCESS_ROW}.status_text)).with_key (agent {TM_PROCESS_ROW}.status_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("PID", 62.0, agent {TM_PROCESS_ROW}.pid_text)).with_key (agent {TM_PROCESS_ROW}.pid_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("CPU", 66.0, agent {TM_PROCESS_ROW}.cpu_text)).with_key (agent {TM_PROCESS_ROW}.cpu_key))
 			grid.add_column ((create {SW_GRID_COLUMN [TM_PROCESS_ROW]}.make ("Private", 90.0, agent {TM_PROCESS_ROW}.private_text)).with_key (agent {TM_PROCESS_ROW}.private_key))
@@ -85,6 +85,22 @@ feature -- Element change
 			end
 		ensure
 			one_row_per_activity: row_count = a_frame.activity_count
+		end
+
+	select_pid (a_pid: INTEGER_64)
+			-- Select the row of process `a_pid', if one is shown.
+		local
+			i: INTEGER
+		do
+			from i := 1 until i > rows.count loop
+				if rows [i].id.pid = a_pid then
+					selected_id := rows [i].id
+					reselecting := True
+					grid.select_model_row (i)
+					reselecting := False
+				end
+				i := i + 1
+			end
 		end
 
 	set_status_source (a_source: FUNCTION [INTEGER_64, STRING_32])

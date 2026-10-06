@@ -31,6 +31,7 @@ feature {NONE} -- Initialization
 			-- Build the window once, start the frame source, run until closed.
 		local
 			l_slot: separate TM_FRAME_SLOT
+			l_details_scroll, l_machine_scroll: SW_SCROLL_AREA
 		do
 			read_arguments
 			create codec.make
@@ -53,8 +54,12 @@ feature {NONE} -- Initialization
 			create details_view.make
 			create actions_bar.make
 			create side_tabs.make
-			side_tabs.add_page ("Selected process", details_view.group)
-			side_tabs.add_page ("This machine", capability_view.group)
+			create l_details_scroll.make (Side_page_height)
+			l_details_scroll.set_child (details_view.group)
+			create l_machine_scroll.make (Side_page_height)
+			l_machine_scroll.set_child (capability_view.group)
+			side_tabs.add_page ("Selected process", l_details_scroll)
+			side_tabs.add_page ("This machine", l_machine_scroll)
 			side_tabs.select_tab (2)
 			store_path := trace_path
 			create status_bar.make
@@ -210,6 +215,10 @@ feature {NONE} -- Tick
 			if not scrub_view.is_scrubbing then
 				process_view.show (a_frame)
 				core_view.show (a_frame.readings)
+				if select_pid > 0 and then a_frame.activities.there_exists (agent (a: TM_PROCESS_ACTIVITY): BOOLEAN do Result := a.id.pid = select_pid end) then
+					process_view.select_pid (select_pid)
+					select_pid := 0
+				end
 			end
 			cpu_tile.show (reading (a_frame, Cpu_headline), metrics.metric (Cpu_headline), {STRING_32} "")
 			memory_tile.show (reading (a_frame, {TM_METRICS}.Mem_commit_pct), metrics.metric ({TM_METRICS}.Mem_commit_pct), {STRING_32} "")
@@ -451,6 +460,9 @@ feature {NONE} -- Process actions (Phase 3)
 
 	ticks_since_windows: INTEGER
 
+	Side_page_height: REAL_64 = 290.0
+			-- Viewport of each side tab: the heatmap, the tabs, and the status bar fit an 820-pixel window.
+
 	Windows_ticks: INTEGER = 8
 			-- GUI ticks (250 ms) between window-list and details refreshes.
 
@@ -662,6 +674,8 @@ feature {NONE} -- Arguments
 					i := i + 1
 				elseif argument (i).same_string ({STRING_32} "--no-record") then
 					no_record := True
+				elseif argument (i).same_string ({STRING_32} "--select") and i < argument_count and then argument (i + 1).is_integer_64 then
+					select_pid := argument (i + 1).to_integer_64
 				elseif argument (i).same_string ({STRING_32} "--history") and i < argument_count and then argument (i + 1).is_integer then
 					history_seconds := argument (i + 1).to_integer.max (1)
 				elseif argument (i).same_string ({STRING_32} "--echo") and i < argument_count then
@@ -729,6 +743,9 @@ feature {NONE} -- Implementation
 
 	no_record: BOOLEAN
 			-- `--no-record': sample without recording.
+
+	select_pid: INTEGER_64
+			-- `--select PID': select that process once it is listed; 0 for none.
 
 	history_seconds: INTEGER
 			-- `--history N': open scrubbed back N seconds once the recording is readable; 0 for live.
