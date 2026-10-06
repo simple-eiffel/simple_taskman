@@ -48,6 +48,7 @@ feature {NONE} -- Initialization
 			run_control_tests
 			run_performance_tests
 			run_settings_tests
+			run_services_tests
 			run_acceptance_tests
 			say ("%N========================%N")
 			say ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
@@ -462,6 +463,18 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_out_of_order_append_is_refused, "out_of_order_append_is_refused")
 			run_test (agent t.test_bad_policies_are_refused, "bad_policies_are_refused")
 			run_test (agent t.test_two_hours_of_frames_retain_in_time, "two_hours_of_frames_retain_in_time")
+		end
+
+	run_services_tests
+		local
+			t: TEST_SERVICES
+		do
+			section ("phase 3: services")
+			create t
+			run_test (agent t.test_services_are_listed, "services_are_listed")
+			run_test (agent t.test_start_types_are_remembered, "start_types_are_remembered")
+			run_test (agent t.test_actions_on_a_missing_service_are_refused, "actions_on_a_missing_service_are_refused")
+			run_test (agent t.test_descriptions_read, "descriptions_read")
 		end
 
 	run_settings_tests

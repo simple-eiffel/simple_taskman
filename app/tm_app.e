@@ -57,7 +57,8 @@ feature {NONE} -- Initialization
 			create actions_bar.make
 			create machine.make
 			create performance_view.make (machine, Main_page_height)
-			create settings_view.make (settings, <<{STRING_32} "Processes", {STRING_32} "Performance">>)
+			create settings_view.make (settings, <<{STRING_32} "Processes", {STRING_32} "Performance", {STRING_32} "Services">>)
+			create services_view.make (Main_page_height)
 			create main_tabs.make
 			create side_tabs.make
 			create l_details_scroll.make (Side_page_height)
@@ -75,6 +76,7 @@ feature {NONE} -- Initialization
 			create scrub_view.make
 			scrub_view.set_handlers (agent on_scrub, agent on_live)
 			settings_view.set_on_change (agent on_settings_changed)
+			services_view.set_reporter (agent report_action)
 			actions_bar.set_actions (agent on_action)
 			process_view.set_status_source (agent status_text)
 			window.set_root (layout)
@@ -122,6 +124,7 @@ feature {NONE} -- Layout
 			l_split.set_grow (1.0)
 			main_tabs.add_page ("Processes", l_split)
 			main_tabs.add_page ("Performance", performance_view.page)
+			main_tabs.add_page ("Services", services_view.column)
 			main_tabs.add_page ("Settings", settings_view.column)
 			main_tabs.set_grow (1.0)
 			if attached start_page as al_page then
@@ -222,6 +225,7 @@ feature {NONE} -- Tick
 			end
 			l_selection_ms := (clock.monotonic_ticks - l_mark) // 10_000
 			l_mark := clock.monotonic_ticks
+			follow_pages
 			ticks_since_refresh := ticks_since_refresh + 1
 			if ticks_since_refresh >= Refresh_ticks then
 				ticks_since_refresh := 0
@@ -481,6 +485,41 @@ feature {NONE} -- History (Phase 2 DVR)
 
 	ticks_since_refresh: INTEGER
 
+
+feature {NONE} -- Pages refreshed while showing (Phase 3)
+
+	services_view: TM_SERVICES_VIEW
+
+	page_ticks: INTEGER
+			-- GUI ticks since the showing page was last refreshed.
+
+	shown_page: INTEGER
+			-- Main tab refreshed last.
+
+	Page_refresh_ticks: INTEGER = 20
+			-- Five seconds at the 250 ms tick.
+
+	follow_pages
+			-- Refresh the showing page on arrival and every five seconds.
+		do
+			page_ticks := page_ticks + 1
+			if main_tabs.selected_index /= shown_page or page_ticks >= Page_refresh_ticks then
+				shown_page := main_tabs.selected_index
+				page_ticks := 0
+				if main_tabs.selected_index >= 1 and main_tabs.selected_index <= main_tabs.labels.count then
+					if main_tabs.labels [main_tabs.selected_index].same_string ({STRING_32} "Services") then
+						services_view.refresh
+					end
+				end
+			end
+		end
+
+	report_action (a_text: READABLE_STRING_32)
+			-- Show an action's outcome on the status bar for a while.
+		do
+			status_bar.set_left (a_text)
+			action_message_until := clock.monotonic_ticks + 60_000_000
+		end
 
 feature {NONE} -- Settings (Phase 3)
 
