@@ -57,8 +57,10 @@ feature {NONE} -- Initialization
 			create actions_bar.make
 			create machine.make
 			create performance_view.make (machine, Main_page_height)
-			create settings_view.make (settings, <<{STRING_32} "Processes", {STRING_32} "Performance", {STRING_32} "Services">>)
+			create settings_view.make (settings, <<{STRING_32} "Processes", {STRING_32} "Performance", {STRING_32} "Services", {STRING_32} "Startup">>)
 			create services_view.make (Main_page_height)
+			create startup_view.make (Main_page_height)
+			create recorder_control
 			create main_tabs.make
 			create side_tabs.make
 			create l_details_scroll.make (Side_page_height)
@@ -77,6 +79,7 @@ feature {NONE} -- Initialization
 			scrub_view.set_handlers (agent on_scrub, agent on_live)
 			settings_view.set_on_change (agent on_settings_changed)
 			services_view.set_reporter (agent report_action)
+			startup_view.set_reporter (agent report_action)
 			actions_bar.set_actions (agent on_action)
 			process_view.set_status_source (agent status_text)
 			window.set_root (layout)
@@ -125,6 +128,7 @@ feature {NONE} -- Layout
 			main_tabs.add_page ("Processes", l_split)
 			main_tabs.add_page ("Performance", performance_view.page)
 			main_tabs.add_page ("Services", services_view.column)
+			main_tabs.add_page ("Startup", startup_view.column)
 			main_tabs.add_page ("Settings", settings_view.column)
 			main_tabs.set_grow (1.0)
 			if attached start_page as al_page then
@@ -504,13 +508,60 @@ feature {NONE} -- Pages refreshed while showing (Phase 3)
 		do
 			page_ticks := page_ticks + 1
 			if main_tabs.selected_index /= shown_page or page_ticks >= Page_refresh_ticks then
-				shown_page := main_tabs.selected_index
-				page_ticks := 0
 				if main_tabs.selected_index >= 1 and main_tabs.selected_index <= main_tabs.labels.count then
 					if main_tabs.labels [main_tabs.selected_index].same_string ({STRING_32} "Services") then
 						services_view.refresh
+					elseif main_tabs.labels [main_tabs.selected_index].same_string ({STRING_32} "Startup")
+							and main_tabs.selected_index /= shown_page then
+						startup_view.refresh (boot_window)
 					end
 				end
+				shown_page := main_tabs.selected_index
+				page_ticks := 0
+			end
+		end
+
+	startup_view: TM_STARTUP_VIEW
+	recorder_control: TM_RECORDER_CONTROL
+
+	boot_window: detachable TM_WINDOW
+			-- The recorded frames of the three minutes after Windows started; Void when nothing is readable.
+		local
+			l_boot: INTEGER_64
+		do
+			if attached reader as al_reader and then al_reader.is_open and then not al_reader.is_empty then
+				l_boot := clock.utc_ticks - machine.uptime_seconds * {TM_CLOCK}.Ticks_per_second
+				if l_boot > 0 and l_boot + Boot_window_ticks > l_boot then
+					Result := al_reader.window (l_boot, l_boot + Boot_window_ticks)
+				end
+			end
+		end
+
+	Boot_window_ticks: INTEGER_64 = 1_800_000_000
+			-- Three minutes.
+
+	apply_logon_recording
+			-- Make the logon registration and the running recorder match the setting.
+		local
+			l_result: TM_ACTION_RESULT
+		do
+			if settings.records_at_logon then
+				if not recorder_control.is_installed then
+					settings_view.set_note ({STRING_32} "The background recorder (taskman_recorder.exe) is not installed beside taskman.exe.")
+				else
+					if not recorder_control.is_registered then
+						l_result := recorder_control.register
+						report_action (l_result.summary)
+					end
+					if not recorder_control.is_running then
+						l_result := recorder_control.start
+						report_action (l_result.summary)
+					end
+				end
+			elseif recorder_control.is_registered or recorder_control.is_running then
+				l_result := recorder_control.unregister
+				recorder_control.request_stop
+				report_action (l_result.summary + {STRING_32} "; the background recorder was asked to stop")
 			end
 		end
 
@@ -551,6 +602,7 @@ feature {NONE} -- Settings (Phase 3)
 				request_interval (al_slot, settings.update_ms)
 			end
 			c_set_topmost (settings.is_always_on_top).do_nothing
+			apply_logon_recording
 			if settings.last_error.is_empty then
 				settings_view.set_note ({STRING_32} "Saved. " + speed_text)
 			else

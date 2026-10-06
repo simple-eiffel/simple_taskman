@@ -49,6 +49,7 @@ feature {NONE} -- Initialization
 			run_performance_tests
 			run_settings_tests
 			run_services_tests
+			run_startup_tests
 			run_acceptance_tests
 			say ("%N========================%N")
 			say ("Results: " + passed.out + " passed, " + failed.out + " failed%N")
@@ -463,6 +464,19 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_out_of_order_append_is_refused, "out_of_order_append_is_refused")
 			run_test (agent t.test_bad_policies_are_refused, "bad_policies_are_refused")
 			run_test (agent t.test_two_hours_of_frames_retain_in_time, "two_hours_of_frames_retain_in_time")
+		end
+
+	run_startup_tests
+		local
+			t: TEST_STARTUP
+		do
+			section ("phase 3: startup apps and the background recorder")
+			create t
+			run_test (agent t.test_impact_from_recorded_frames, "impact_from_recorded_frames")
+			run_test (agent t.test_impact_without_recording_says_so, "impact_without_recording_says_so")
+			run_test (agent t.test_list_reads_and_toggles_an_entry, "list_reads_and_toggles_an_entry")
+			run_test (agent t.test_every_item_is_named, "every_item_is_named")
+			run_test (agent t.test_recorder_registration_round_trip, "recorder_registration_round_trip")
 		end
 
 	run_services_tests

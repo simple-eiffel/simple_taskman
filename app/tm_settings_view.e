@@ -35,11 +35,13 @@ feature {NONE} -- Initialization
 			end
 			create on_top.make ("Always on top", a_settings.is_always_on_top, Void)
 			create recording.make ("Record history (from the next start)", a_settings.records, Void)
+			create at_logon.make ("Record from logon (background recorder, keeps recording after the window closes)", a_settings.records_at_logon, Void)
 			create note_label.make_ui ("")
 			column.put (labelled ("Update speed", speed))
 			column.put (labelled ("Open on", page_choice))
 			column.put (on_top)
 			column.put (recording)
+			column.put (at_logon)
 			column.put (note_label)
 			create extras.make
 			extras := extras.with_gap (16.0)
@@ -50,6 +52,7 @@ feature {NONE} -- Initialization
 			page_choice.set_on_change (agent page_changed)
 			on_top.set_on_change (agent switch_changed)
 			recording.set_on_change (agent switch_changed)
+			at_logon.set_on_change (agent switch_changed)
 		end
 
 feature -- Access
@@ -79,7 +82,7 @@ feature {NONE} -- Implementation
 
 	pages: ARRAYED_LIST [STRING_32]
 	speed, page_choice: SW_SEGMENTED
-	on_top, recording: SW_SWITCH
+	on_top, recording, at_logon: SW_SWITCH
 	note_label: SW_LABEL
 	on_change: detachable PROCEDURE
 
@@ -140,6 +143,7 @@ feature {NONE} -- Implementation
 		do
 			settings.set_always_on_top (on_top.is_on)
 			settings.set_records (recording.is_on)
+			settings.set_records_at_logon (at_logon.is_on)
 			changed
 		end
 

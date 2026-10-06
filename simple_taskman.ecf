@@ -118,5 +118,15 @@
 		<cluster name="app" location=".\app\"/>
 	</target>
 
+	<!-- The background recorder: no window, no console (GUI subsystem); records at logon. -->
+	<target name="taskman_recorder" extends="simple_taskman">
+		<root class="TM_RECORDER_APP" feature="make"/>
+		<setting name="console_application" value="false"/>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<cluster name="recorder_app" location=".\recorder_app\"/>
+	</target>
+
 	<!-- The Phase 2 recorder (taskman_recorder) is added when its root class exists. -->
 </system>
