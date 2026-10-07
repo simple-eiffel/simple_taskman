@@ -504,6 +504,9 @@ feature {NONE} -- Test sets
 			run_test (agent t.test_disk_saturation, "disk_saturation")
 			run_test (agent t.test_calm_window_says_no_bottleneck, "calm_window_says_no_bottleneck")
 			run_test (agent t.test_missing_readings_cannot_be_told, "missing_readings_cannot_be_told")
+			run_test (agent t.test_single_thread_limit_names_the_process, "single_thread_limit_names_the_process")
+			run_test (agent t.test_light_multithreaded_load_is_not_a_single_thread, "light_multithreaded_load_is_not_a_single_thread")
+			run_test (agent t.test_cpu_saturation_outranks_a_single_thread, "cpu_saturation_outranks_a_single_thread")
 		end
 
 	run_session_tests

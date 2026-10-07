@@ -11,8 +11,12 @@ The window (taskman.exe)
 - The verdict, under the tiles: why the machine is slow right now (memory
   full, a disk saturated, or the CPU saturated), naming the process behind
   it and the numbers, or "No bottleneck" with the numbers. Memory pressure
-  ranks first, because paging also shows up as disk and CPU load. Drag the
-  History strip and the verdict is for that moment instead.
+  ranks first, because paging also shows up as disk and CPU load. A fourth
+  finding, in amber: a single-thread limit, when one program keeps one full
+  core busy while the CPU as a whole is not (the total CPU can read 3% while
+  that program is at its ceiling; the Cores heatmap shows the one lit
+  square). Drag the History strip and the verdict is for that moment
+  instead.
 - Look ahead: when memory will run out at the current rate, which disk
   fills and in how many days, and processes whose memory keeps growing
   (leak suspects). Each forecast shows its fit, and says "watching" until

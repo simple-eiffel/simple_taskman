@@ -70,7 +70,62 @@ feature -- Tests
 			assert_string_contains ("names what is missing", l_verdict.sentence, "memory")
 		end
 
+	test_single_thread_limit_names_the_process
+			-- One process pinned at one core while the machine is mostly idle.
+		local
+			l_verdict: TM_VERDICT
+		do
+			l_verdict := diagnostician.diagnose (window (6.0, 60.0, 5.0, 2.0, <<busy ("spinner.exe", 1.0), busy ("idle.exe", 0.1)>>))
+			assert_integers_equal ("single thread", {TM_VERDICT}.Single_thread_limit, l_verdict.kind)
+			assert_true ("culprit", l_verdict.culprit.same_string ({STRING_32} "spinner.exe"))
+			assert_string_contains ("says it", l_verdict.sentence, "one full core")
+			assert_false ("one program, not the machine", l_verdict.is_machine_wide)
+		end
+
+	test_light_multithreaded_load_is_not_a_single_thread
+			-- Averaging one core but swinging from 0.3 to 1.7 cores is many threads, not one at its limit.
+		local
+			l_window: TM_WINDOW
+			l_readings: TM_READINGS
+			l_list: ARRAYED_LIST [TM_PROCESS_ACTIVITY]
+			i: INTEGER
+		do
+			create l_window.make
+			from i := 0 until i = 20 loop
+				l_readings := calm_readings
+				create l_list.make (1)
+				if i \\ 2 = 0 then
+					l_list.extend (busy ("builder.exe", 0.3))
+				else
+					l_list.extend (busy ("builder.exe", 1.7))
+				end
+				l_window.extend (create {TM_FRAME}.make (Base_utc + i * One_second, Base_utc + (i + 1) * One_second, One_second, 4, False,
+					l_readings, l_list, create {ARRAYED_LIST [TM_PROCESS_ID]}.make (0), create {ARRAYED_LIST [TM_PROCESS_SAMPLE]}.make (0)))
+				i := i + 1
+			end
+			assert_integers_equal ("calm", {TM_VERDICT}.None, diagnostician.diagnose (l_window).kind)
+		end
+
+	test_cpu_saturation_outranks_a_single_thread
+		local
+			l_verdict: TM_VERDICT
+		do
+			l_verdict := diagnostician.diagnose (window (95.0, 60.0, 5.0, 2.0, <<busy ("spinner.exe", 1.0), busy ("hog.exe", 2.5)>>))
+			assert_integers_equal ("cpu first", {TM_VERDICT}.Cpu_saturation, l_verdict.kind)
+		end
+
 feature {NONE} -- Fixtures
+
+	calm_readings: TM_READINGS
+			-- A quiet machine: CPU 6%, commit 60%, few faults, disk 2%.
+		do
+			create Result.make
+			Result.put ({TM_METRICS}.Cpu_utility_pct, {STRING_32} "", measured ({TM_METRICS}.Cpu_utility_pct, 6.0))
+			Result.put ({TM_METRICS}.Mem_commit_pct, {STRING_32} "", measured ({TM_METRICS}.Mem_commit_pct, 60.0))
+			Result.put ({TM_METRICS}.Mem_hard_faults_per_s, {STRING_32} "", measured ({TM_METRICS}.Mem_hard_faults_per_s, 5.0))
+			Result.put ({TM_METRICS}.Disk_busy_pct, {STRING_32} "1 D:", measured ({TM_METRICS}.Disk_busy_pct, 2.0))
+		end
+
 
 	diagnostician: TM_DIAGNOSTICIAN
 		do

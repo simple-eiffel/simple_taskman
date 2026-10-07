@@ -67,7 +67,9 @@ feature {NONE} -- Initialization
 			create trend_book.make
 			create live_frames.make (Verdict_frames)
 			create verdict_label.make ("Watching: the first verdict comes after ten seconds of frames.", {SW_PAINTER}.Role_ui, 15.0, True)
+			verdict_label := verdict_label.with_wrap
 			create ahead_label.make_ui ("Look ahead: watching")
+			ahead_label := ahead_label.with_wrap
 			create main_tabs.make
 			create side_tabs.make
 			create l_details_scroll.make (Side_page_height)
@@ -571,8 +573,10 @@ feature {NONE} -- Verdict and look-ahead (Phases 4 and 5)
 			-- Put `a_verdict' on the banner, coloured by what it found.
 		do
 			verdict_label.set_text (a_prefix + a_verdict.full_text)
-			if a_verdict.is_found then
+			if a_verdict.is_machine_wide then
 				verdict_label.set_color (theme.danger)
+			elseif a_verdict.is_found then
+				verdict_label.set_color (theme.warning)
 			elseif a_verdict.kind = {TM_VERDICT}.None then
 				verdict_label.set_color (theme.success)
 			else

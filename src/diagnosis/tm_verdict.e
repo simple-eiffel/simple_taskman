@@ -1,8 +1,8 @@
 note
 	description: "[
 		The answer to "why is it slow?" for one window of frames: a kind
-		(none, memory pressure, disk saturation, CPU saturation, or can't
-		tell), one plain sentence, the culprit when there is one, the
+		(none, memory pressure, disk saturation, CPU saturation, a single
+		thread's limit, or can't tell), one plain sentence, the culprit when there is one, the
 		evidence behind it, and lower-ranked findings (spec 04, Diagnosis).
 	]"
 	author: "Larry Rix"
@@ -45,7 +45,8 @@ feature -- Access
 	Memory_pressure: INTEGER = 1
 	Disk_saturation: INTEGER = 2
 	Cpu_saturation: INTEGER = 3
-	Inconclusive: INTEGER = 4
+	Single_thread_limit: INTEGER = 4
+	Inconclusive: INTEGER = 5
 
 	full_text: STRING_32
 			-- Sentence, then "also" findings.
@@ -60,6 +61,13 @@ feature -- Status report
 
 	is_found: BOOLEAN
 			-- Did a rule name a bottleneck?
+		do
+			Result := kind = Memory_pressure or kind = Disk_saturation or kind = Cpu_saturation
+				or kind = Single_thread_limit
+		end
+
+	is_machine_wide: BOOLEAN
+			-- Does the finding hold the whole machine back, not one program?
 		do
 			Result := kind = Memory_pressure or kind = Disk_saturation or kind = Cpu_saturation
 		end

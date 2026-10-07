@@ -17,7 +17,7 @@ Part of the [Simple Eiffel](https://github.com/simple-eiffel) ecosystem.
 🚧 **In development: v0.3.0.** Goal (intent v3): a full replacement for Windows Task Manager, plus a recorder, a diagnosis, and forecasts.
 
 - 274 tests pass (2026-10-06), with contracts monitored
-- **Verdict:** why the machine is slow (memory pressure, disk saturation, or CPU saturation), naming the process and the evidence, live or for any recorded moment
+- **Verdict:** why the machine is slow (memory pressure, disk saturation, or CPU saturation), naming the process and the evidence, live or for any recorded moment; plus a single-thread limit (one program pinned at one full core while the total CPU looks idle)
 - **Look ahead:** memory runway, days until a disk fills, and leak suspects, each with its fit shown
 - **Task Manager's tabs:** Processes (with End task / End process / End tree / priority / efficiency mode, always by process identity), Performance (CPU, memory, disks, network, GPU), Services, Startup apps (with measured impact), Users, Settings; run as administrator; open on Ctrl+Shift+Esc
 - **Recorder:** every frame goes to `%LOCALAPPDATA%\simple_taskman\trace.db` (SQLite), kept at 1 s for an hour, 10 s for a day, 60 s for 30 days, capped at 250 MB; 6 to 13 MB written an hour. Optional background recorder from logon. The History strip scrubs back; `taskman_cli trace` reads any recorded moment

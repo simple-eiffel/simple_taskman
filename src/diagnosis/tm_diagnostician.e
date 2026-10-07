@@ -9,11 +9,21 @@ note
 		  Disk saturation  a disk's mean busy >= 80%; culprit: most bytes moved.
 		  CPU saturation   mean CPU utility >= 85%; culprit: the process (by
 		                   name) with the most CPU time in the window.
+		  Single thread    the CPU is not saturated, but one process stays at
+		                   about one full core (0.85 to 1.15 cores on average,
+		                   at 0.8 or more for 80% of its measured time): one
+		                   thread at its limit. Judged per process, not per
+		                   core, because Windows moves a busy thread between
+		                   cores (measured 2026-10-07: one spinning thread
+		                   read 72-94% on whichever of cores 0-3 it was on,
+		                   never a steady 100% on one). Needs 4 or more
+		                   logical processors; on fewer it is CPU saturation.
 
 		Each needs coverage >= 0.8 and at least `Minimum_seconds' measured.
-		Precedence memory, disk, CPU: memory pressure causes paging, which
-		shows up as disk and CPU load, so the root cause ranks first; the
-		others join as "also". No rule able to judge: inconclusive, naming
+		Precedence memory, disk, CPU, single thread: memory pressure causes
+		paging, which shows up as disk and CPU load, so the root cause ranks
+		first; the others join as "also". A single thread's limit holds back
+		one program, not the machine, so it ranks last. No rule able to judge: inconclusive, naming
 		what was missing. Rules able to judge but finding nothing: none.
 	]"
 	author: "Larry Rix"
@@ -43,6 +53,15 @@ feature -- Constants
 	Cpu_busy_pct: REAL_64 = 85.0
 	Minimum_coverage: REAL_64 = 0.8
 	Minimum_seconds: REAL_64 = 10.0
+	Single_thread_low: REAL_64 = 0.85
+	Single_thread_high: REAL_64 = 1.15
+	Single_thread_floor: REAL_64 = 0.8
+			-- Cores a capped thread's process stays at or above...
+	Single_thread_share: REAL_64 = 0.8
+			-- ...for at least this share of its measured time. Not 0.9: on
+			-- 2026-10-07 a 32-way C compile stretched one frame to 5 s and
+			-- squeezed a spinning thread for 15% of a 34 s window.
+	Single_thread_min_processors: INTEGER = 4
 
 feature -- Basic operations
 
@@ -52,7 +71,7 @@ feature -- Basic operations
 			l_findings: ARRAYED_LIST [TM_VERDICT]
 			l_judged: BOOLEAN
 			l_missing: STRING_32
-			l_memory, l_disk, l_cpu: detachable TM_VERDICT
+			l_memory, l_disk, l_cpu, l_single: detachable TM_VERDICT
 		do
 			create l_findings.make (3)
 			create l_missing.make_empty
@@ -77,9 +96,15 @@ feature -- Basic operations
 				if judgeable (a_window, {TM_METRICS}.Cpu_utility_pct, {STRING_32} "") then
 					l_judged := True
 					l_cpu := cpu_rule (a_window, {TM_METRICS}.Cpu_utility_pct)
+					if l_cpu = Void then
+						l_single := single_thread_rule (a_window, {TM_METRICS}.Cpu_utility_pct)
+					end
 				elseif judgeable (a_window, {TM_METRICS}.Cpu_busy_pct, {STRING_32} "") then
 					l_judged := True
 					l_cpu := cpu_rule (a_window, {TM_METRICS}.Cpu_busy_pct)
+					if l_cpu = Void then
+						l_single := single_thread_rule (a_window, {TM_METRICS}.Cpu_busy_pct)
+					end
 				else
 					add_missing (l_missing, {STRING_32} "CPU")
 				end
@@ -91,6 +116,9 @@ feature -- Basic operations
 				end
 				if attached l_cpu as al_cpu then
 					l_findings.extend (al_cpu)
+				end
+				if attached l_single as al_single then
+					l_findings.extend (al_single)
 				end
 				if not l_findings.is_empty then
 					Result := l_findings.first
@@ -233,6 +261,60 @@ feature {NONE} -- Rules
 					Result.sentence.append ({STRING_32} " " + l_name + {STRING_32} " used " + format.percent (l_share) + {STRING_32} " of it.")
 				end
 				Result.add_evidence ({STRING_32} "CPU " + format.percent (l_busy))
+			end
+		end
+
+	single_thread_rule (a_window: TM_WINDOW; a_code: INTEGER): detachable TM_VERDICT
+			-- The process held at about one full core for most of the window, if any.
+		local
+			l_seconds, l_core_seconds, l_capped_seconds: HASH_TABLE [REAL_64, TM_PROCESS_ID]
+			l_names: HASH_TABLE [STRING_32, TM_PROCESS_ID]
+			l_frame_seconds, l_total, l_mean, l_best_mean, l_share: REAL_64
+			l_best: detachable TM_PROCESS_ID
+			i: INTEGER
+		do
+			if a_window.last_frame.logical_processors >= Single_thread_min_processors then
+				create l_seconds.make (64)
+				create l_core_seconds.make (64)
+				create l_capped_seconds.make (64)
+				create l_names.make (64)
+				from i := 1 until i > a_window.count loop
+					l_frame_seconds := a_window.frame (i).duration.to_double / {TM_CLOCK}.Ticks_per_second.to_double
+					l_total := l_total + l_frame_seconds
+					across a_window.frame (i).activities as ic loop
+						if ic.has_resource ({TM_RESOURCE}.Cpu) and not ic.id.is_idle_pseudo_process then
+							l_seconds.force (l_seconds.item (ic.id) + l_frame_seconds, ic.id)
+							l_core_seconds.force (l_core_seconds.item (ic.id) + ic.cpu_cores * l_frame_seconds, ic.id)
+							if ic.cpu_cores >= Single_thread_floor then
+								l_capped_seconds.force (l_capped_seconds.item (ic.id) + l_frame_seconds, ic.id)
+							end
+							l_names.force (ic.name, ic.id)
+						end
+					end
+					i := i + 1
+				end
+				across l_seconds as ic loop
+					if ic >= Minimum_seconds and ic >= Minimum_coverage * l_total then
+						l_mean := l_core_seconds.item (@ic.key) / ic
+						if l_mean >= Single_thread_low and l_mean <= Single_thread_high
+								and l_capped_seconds.item (@ic.key) >= Single_thread_share * ic and l_mean > l_best_mean then
+							l_best_mean := l_mean
+							l_best := @ic.key
+							l_share := l_capped_seconds.item (@ic.key) * 100.0 / ic
+						end
+					end
+				end
+				if attached l_best as al_best and then attached l_names.item (al_best) as al_name then
+					create Result.make ({TM_VERDICT}.Single_thread_limit, {STRING_32} "Single-thread limit: " + al_name
+						+ {STRING_32} " has kept one full core busy for the last " + seconds_text (a_window)
+						+ {STRING_32} " while the CPU overall is " + format.percent (a_window.aggregate (a_code, {STRING_32} "").reading.value)
+						+ {STRING_32} " busy. Likely one thread at its limit: more cores will not speed it up.")
+					Result.set_culprit (al_name)
+					Result.add_evidence (al_name + {STRING_32} " " + format.one_decimal (l_best_mean) + {STRING_32} " of "
+						+ a_window.last_frame.logical_processors.out.to_string_32 + {STRING_32} " cores, at 0.8 or more for "
+						+ format.percent (l_share) + {STRING_32} " of the time")
+					Result.add_evidence ({STRING_32} "CPU " + format.percent (a_window.aggregate (a_code, {STRING_32} "").reading.value))
+				end
 			end
 		end
 
