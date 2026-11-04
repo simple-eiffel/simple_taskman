@@ -40,7 +40,7 @@ presentations that WOW the user", covering "past, present, predictable future".
 | D-1 | Run as administrator? | Start without admin rights. Offer "Show everything (restart as admin)", as Process Explorer does. Without admin, the affected features stay visible and state the reason, the way the capability panel already does. |
 | D-2 | Scope lifts | Allowed: command lines, full image paths, window titles, user names, and actions on processes (end, end tree, priority, affinity, efficiency mode, dump). Kept on this PC only; left out of case files and exports unless the owner includes them. Still refused: actions on protected system processes. Still out: handle and DLL browsing, except the file-lock finder (Restart Manager). |
 | D-3 | Order | Recorder first ("Remember"), then everyday parity ("Daily driver"), then diagnosis, forecasts, and the remaining parity and tools. |
-| D-4 | Window cost | Measured on JACKJACK, 2026-10-06, two minutes each, same counter (`\Process(*)\% Processor Time`, 1 s samples), window visible, normal update speed: Windows Task Manager **8.01% avg, 13.90% max of one logical processor, 127 MB private**; taskman lean **4.86% avg, 9.26% max, 31 MB**. Limit: taskman's whole-process cost stays at or below Task Manager's on the same PC at the same update speed. "Repaint only what changed" in simple_widgets comes before the large visuals. |
+| D-4 | Window cost | Measured on the reference PC, 2026-10-06, two minutes each, same counter (`\Process(*)\% Processor Time`, 1 s samples), window visible, normal update speed: Windows Task Manager **8.01% avg, 13.90% max of one logical processor, 127 MB private**; taskman lean **4.86% avg, 9.26% max, 31 MB**. Limit: taskman's whole-process cost stays at or below Task Manager's on the same PC at the same update speed. "Repaint only what changed" in simple_widgets comes before the large visuals. |
 
 ## Phases and acceptance criteria
 
@@ -105,8 +105,8 @@ for that export. Nothing leaves the PC.
 
 | ID | Requirement | Measure | Target |
 |----|-------------|---------|--------|
-| NFR-010 | Window cost | Whole-process CPU, % of one logical processor, normal speed | At or below Windows Task Manager on the same PC (8.01% on JACKJACK, 2026-10-06) |
-| NFR-011 | Window memory | Private bytes, live view | At or below Windows Task Manager (127 MB on JACKJACK) |
+| NFR-010 | Window cost | Whole-process CPU, % of one logical processor, normal speed | At or below Windows Task Manager on the same PC (8.01% on the reference PC, 2026-10-06) |
+| NFR-011 | Window memory | Private bytes, live view | At or below Windows Task Manager (127 MB on the reference PC) |
 | NFR-007 | Privilege (unchanged) | Rights for MUST features | Standard user; admin-only features say so |
 
 ## Upstream work this plan depends on

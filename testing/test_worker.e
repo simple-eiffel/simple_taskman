@@ -4,7 +4,7 @@ note
 		sampling worker on its own processor reads this machine, encodes each
 		frame, and deposits it in the slot on another processor; the test
 		collects a frame, decodes it, asks the worker to stop, and sees it
-		stop. Machine-neutral: it needs a Windows machine, not JACKJACK.
+		stop. Machine-neutral: it needs a Windows machine, not the reference PC.
 
 		Every slot access here is one short call from the test body; no
 		routine holds the slot while waiting (oracle gotcha).

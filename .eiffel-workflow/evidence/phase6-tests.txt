@@ -274,7 +274,7 @@ Running simple_taskman tests...
     bench: system source: 50 unpaced refreshes in 128 ms: 39 with a value, 11 unavailable
   PASS: system_source_refreshed_fifty_times
 
--- acceptance on JACKJACK --
+-- acceptance on the reference PC --
   PASS: native_table_trusted_here
   PASS: native_read_lists_idle_and_self
   PASS: win_capabilities_here

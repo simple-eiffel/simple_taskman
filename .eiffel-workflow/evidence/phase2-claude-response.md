@@ -66,8 +66,8 @@ repro). Line numbers are from the files as compiled for phase1-compile.txt.
 ### ISSUE 10: Machine-specific acceptance tests are mixed with unit tests
 - **LOCATION**: TEST_SOURCES (native trusted, package power, temperature, 32 processors), LIB_TESTS live tests
 - **SEVERITY**: MEDIUM
-- **DESCRIPTION**: These encode facts about JACKJACK. On any other machine (a contributor, CI, publication) they fail for reasons that are not defects.
-- **SUGGESTION**: Move them to `TEST_ACCEPTANCE`, run by a separate runner switch or only when COMPUTERNAME is JACKJACK. Keep machine-neutral live tests (self listed, idle listed, clock monotonic) in the unit suite.
+- **DESCRIPTION**: These encode facts about the reference PC. On any other machine (a contributor, CI, publication) they fail for reasons that are not defects.
+- **SUGGESTION**: Move them to `TEST_ACCEPTANCE`, run by a separate runner switch or only when COMPUTERNAME is the reference PC. Keep machine-neutral live tests (self listed, idle listed, clock monotonic) in the unit suite.
 
 ### ISSUE 11: Decoded activities clamp negative identity fields
 - **LOCATION**: TM_PROCESS_ACTIVITY.make_decoded (tm_process_activity.e:101-103)

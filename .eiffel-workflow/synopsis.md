@@ -34,7 +34,7 @@ fixing them later means changing frozen contracts.
 7. `TM_READINGS.reading` accepts the wrong instance form silently.
 8. Frame born and exited lists are not tied to its activities.
 9. `TM_READINGS.put` model checks cost O(n^2) per call.
-10. JACKJACK-specific acceptance tests sit in the unit suite.
+10. the reference PC-specific acceptance tests sit in the unit suite.
 11. Decoded activities clamp negative fields instead of refusing them.
 
 ## Minor (fix during implementation)

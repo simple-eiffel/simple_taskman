@@ -1,5 +1,5 @@
 # Phase 2 (Remember) - gate status
-# Date: 2026-10-06 13:45   Machine: JACKJACK
+# Date: 2026-10-06 13:45   Machine: the reference PC
 
 ## Acceptance (intent-v3, Phase 2)
 [x] Recorder writes frames to SQLite in the owner's profile (%LOCALAPPDATA%\simple_taskman\trace.db), schema v1

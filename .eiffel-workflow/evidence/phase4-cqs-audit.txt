@@ -116,7 +116,7 @@ Clean rebuild (EIFGENs deleted):
   ec.sh check -target simple_taskman_measure: System Recompiled, no errors or warnings
   ec.sh test  -target simple_taskman_tests:   System Recompiled; Built; no Error code,
     Warning code, warning C, or error C
-  F_code run on JACKJACK: Results: 161 passed, 0 failed - ALL TESTS PASSED
+  F_code run on the reference PC: Results: 161 passed, 0 failed - ALL TESTS PASSED
 
 Violations remaining: 0
 Status: PASS

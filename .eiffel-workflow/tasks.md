@@ -326,7 +326,7 @@ Task 7
 - [ ] `grep -rn "Phase 4" src/` finds nothing
 - [ ] Clean `ec.sh test` for simple_taskman_tests: System Recompiled, zero warnings, Eiffel and C
 - [ ] `ec.sh check` for simple_taskman_measure: clean (Q7)
-- [ ] F_code run on JACKJACK: every test passes, acceptance included
+- [ ] F_code run on the reference PC: every test passes, acceptance included
 - [ ] Evidence written to evidence/phase4-implement.txt with the pasted output
 
 ### Dependencies

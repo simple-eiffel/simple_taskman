@@ -42,7 +42,7 @@ Test run (F_code, contracts kept): Results: 67 passed, 40 failed
   reading_with_wrong_instance_form_refused, put_frame_condition_in_mml,
   extend_frame_condition_in_mml, stopped_flag, injected_sources_have_no_self,
   clock_change_rule
-  Acceptance (TEST_ACCEPTANCE) ran because COMPUTERNAME = JACKJACK; its 3 tests
+  Acceptance (TEST_ACCEPTANCE) ran because COMPUTERNAME = the reference PC; its 3 tests
   fail on Phase 4 stubs (self-check, native read, support probing).
 
 # Status: COMPLETE (approved; fixes applied)

@@ -1,7 +1,7 @@
 # Hardware / sensor probe evidence
 # Project: D:\prod\simple_taskman
 # Date: 2026-10-03 (run from a NON-ADMIN PowerShell 7 session)
-# Machine: JACKJACK
+# Machine: the reference PC
 # Purpose: find out which telemetry is actually readable on this machine
 #          without a kernel driver and without elevation.
 # Everything below is pasted command output, lightly trimmed (long instance
@@ -189,7 +189,7 @@ processes examined (excluding Idle and System): 339
 can open for QUERY (read details)        : 200  denied: 139
 can open for SET_INFORMATION (throttle)  : 189  denied: 150
 can open for TERMINATE (end task)        : 199  denied: 140
-names denied even for QUERY: AggregatorHostx1 amdfendrsrx1 armsvcx1 atieclxxx1 atiesrxxx1 conhostx1 cowork-svcx1 crashpad_handlerx1 csrssx2 dasHostx2 dwmx1 fontdrvhostx2 httpdx2 LsaIsox1 lsassx1 MpDefenderCoreServicex1 MsMpEngx1 NgcIsox1 NisSrvx1 nvcontainerx2 NVDisplay.Containerx2 pg_ctlx1 postgresx10 Registryx1 SearchIndexerx1 SearchProtocolHostx1 Secure Systemx1 SecurityHealthServicex1 servicesx1 smssx1 spoolsvx1 Surfshark.Servicex1 svchostx82 TeamViewer_Servicex1 tv_w32x1 tv_x64x1 vmcomputex1 vmmemWSLx1 vmwpx1 wininitx1 winlogonx1 wslservicex1 WUDFHostx1
+names denied even for QUERY: AggregatorHostx1 amdfendrsrx1 armsvcx1 atieclxxx1 atiesrxxx1 conhostx1 cowork-svcx1 crashpad_handlerx1 csrssx2 dasHostx2 dwmx1 fontdrvhostx2 httpdx2 LsaIsox1 lsassx1 MpDefenderCoreServicex1 MsMpEngx1 NgcIsox1 NisSrvx1 nvcontainerx2 NVDisplay.Containerx2 pg_ctlx1 postgresx10 Registryx1 SearchIndexerx1 SearchProtocolHostx1 Secure Systemx1 SecurityHealthServicex1 servicesx1 smssx1 spoolsvx1 VPN client.Servicex1 svchostx82 TeamViewer_Servicex1 tv_w32x1 tv_x64x1 vmcomputex1 vmmemWSLx1 vmwpx1 wininitx1 winlogonx1 wslservicex1 WUDFHostx1
 distinct names denied for throttle: 52
 (The "is the account in Administrators" check failed: whoami not found in
  that shell. Whether this account can elevate through UAC is NOT verified.)

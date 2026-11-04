@@ -13,7 +13,7 @@ note
 		The processes table holds rows for tier 1 and 2 frames only, so
 		per-process SQL covers everything older than an hour, while the
 		1-second frames keep their processes in the payload alone. Measured
-		2026-10-06 on JACKJACK: with rows for every frame and a commit every
+		2026-10-06 on the reference PC: with rows for every frame and a commit every
 		10 frames the recorder wrote 50 MB an hour, two and a half times the
 		NFR-004 budget; most of it was index pages rewritten at each commit.
 

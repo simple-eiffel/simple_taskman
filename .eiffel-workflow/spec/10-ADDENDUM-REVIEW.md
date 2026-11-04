@@ -22,7 +22,7 @@ plus flag for clock changes; fix issues 1-11 before /eiffel.tasks.
 | 7 | TM_READINGS.reading | Precondition `instance_rule`. |
 | 8 | TM_FRAME | `born_are_new_activities`, `exited_not_active`; a discontinuity holds no born or exited identities. |
 | 9 | TM_READINGS.put | `others_unchanged` O(n) via `agrees_except`; count rule. MML form kept in a test. |
-| 10 | tests | JACKJACK facts moved to TEST_ACCEPTANCE, run only when COMPUTERNAME is JACKJACK. |
+| 10 | tests | the reference PC facts moved to TEST_ACCEPTANCE, run only when COMPUTERNAME is the reference PC. |
 | 11 | TM_PROCESS_ACTIVITY.make_decoded | Requires non-negative identity fields; no clamping. |
 
 ## MML decision, restated

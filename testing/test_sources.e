@@ -2,7 +2,7 @@ note
 	description: "[
 		Tests for the probe: scripted sources, CPU topology, paths, and the live
 		Windows sources on this machine. The live tests state what the Phase 1
-		acceptance criteria expect on the reference machine (JACKJACK): native
+		acceptance criteria expect on the reference machine (the reference PC): native
 		table trusted, package power available, temperature not supported.
 	]"
 	author: "Larry Rix"

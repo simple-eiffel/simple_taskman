@@ -1,6 +1,6 @@
 note
 	description: "[
-		Acceptance tests that state facts about the reference machine, JACKJACK
+		Acceptance tests that state facts about the reference machine, the reference PC
 		(Phase 1 acceptance criteria): the native table passes its self-check,
 		CPU package power is available, temperature and battery are not
 		supported. Run only on that machine; anywhere else these facts may

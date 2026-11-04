@@ -26,10 +26,10 @@ ec.sh test -config simple_taskman.ecf -target simple_taskman_tests
   Built: EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe (0s ago)
   grep for "Error code|Warning code|warning C|error C": no matches
 
-./EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe   (COMPUTERNAME = JACKJACK)
+./EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe   (COMPUTERNAME = the reference PC)
   Results: 121 passed, 0 failed
   ALL TESTS PASSED
-  -- acceptance on JACKJACK --
+  -- acceptance on the reference PC --
     PASS: native_table_trusted_here
     PASS: native_read_lists_idle_and_self
     PASS: win_capabilities_here

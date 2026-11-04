@@ -3,7 +3,7 @@
 # Date: 2026-10-05
 # Build: ec.sh test -config simple_taskman.ecf -target simple_taskman_tests (clean EIFGENs)
 #   System Recompiled; Built; no Error code, Warning code, warning C, or error C
-# Run: ./EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe on JACKJACK
+# Run: ./EIFGENs/simple_taskman_tests/F_code/simple_taskman.exe on the reference PC
 
 Running simple_taskman tests...
 
@@ -195,7 +195,7 @@ Running simple_taskman tests...
 -- phase 5 coverage: SCOOP handoff end to end --
   PASS: worker_samples_hands_over_and_stops
 
--- acceptance on JACKJACK --
+-- acceptance on the reference PC --
   PASS: native_table_trusted_here
   PASS: native_read_lists_idle_and_self
   PASS: win_capabilities_here

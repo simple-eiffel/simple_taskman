@@ -1,7 +1,7 @@
 # Spike O-2 and the Phase 1 product targets: evidence
 # Project: D:\prod\simple_taskman
 # Date: 2026-10-05 (evening; the one-hour soak ran 21:45:12-22:45:13)
-# Machine: JACKJACK, Windows 11, 32 logical processors
+# Machine: the reference PC, Windows 11, 32 logical processors
 
 Larry paused /eiffel.ship and asked for spike O-2 and the taskman GUI, CLI,
 and stress targets first. All three targets exist, build clean, and were run

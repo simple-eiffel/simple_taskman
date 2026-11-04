@@ -591,9 +591,10 @@ feature {NONE} -- Test sets
 			t: TEST_ACCEPTANCE
 			l_env: SIMPLE_ENV
 		do
-			section ("acceptance on " + Reference_machine)
+			section ("acceptance on the reference machine")
 			create l_env
-			if attached l_env.item ("COMPUTERNAME") as al_name and then al_name.same_string_general (Reference_machine) then
+			if attached l_env.item ("COMPUTERNAME") as al_name and then attached l_env.item ("TASKMAN_REFERENCE_PC") as al_reference
+				and then al_name.same_string_general (al_reference) then
 				create t
 				run_test (agent t.test_native_table_trusted_here, "native_table_trusted_here")
 				run_test (agent t.test_native_read_lists_idle_and_self, "native_read_lists_idle_and_self")
@@ -606,8 +607,7 @@ feature {NONE} -- Test sets
 			end
 		end
 
-	Reference_machine: STRING = "JACKJACK"
-			-- Where the Phase 1 acceptance facts were measured.
+	-- The acceptance facts run where TASKMAN_REFERENCE_PC names this computer.
 
 feature {NONE} -- Implementation
 
