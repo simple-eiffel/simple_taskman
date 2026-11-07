@@ -12,6 +12,8 @@ A diagnostic task manager for Windows, written in Eiffel, that aims to answer *w
 
 Part of the [Simple Eiffel](https://github.com/simple-eiffel) ecosystem.
 
+> **Windows only.** It reads Windows process, performance and service APIs. There is no macOS or Linux version, and none is planned.
+
 ## Status
 
 🚧 **In development: v0.3.0.** Goal (intent v3): a full replacement for Windows Task Manager, plus a recorder, a diagnosis, and forecasts.
