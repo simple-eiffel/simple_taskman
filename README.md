@@ -7,6 +7,7 @@
 ![Eiffel 25.02](https://img.shields.io/badge/Eiffel-25.02-purple.svg)
 ![DBC: Contracts](https://img.shields.io/badge/DBC-Contracts-green.svg)
 ![SCOOP](https://img.shields.io/badge/SCOOP-ready-orange.svg)
+![Windows only](https://img.shields.io/badge/platform-Windows%20only-0078D6?logo=windows&logoColor=white)
 
 A diagnostic task manager for Windows, written in Eiffel, that aims to answer *why* the computer is slow, even after the slowdown has ended.
 
