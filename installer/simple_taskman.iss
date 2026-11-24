@@ -28,6 +28,7 @@
 #define AppVersion     "0.3.0"
 #define AppPublisher   "Larry Rix"
 #define AppExeName     "taskman.exe"
+#define CairoDir       "..\..\simple_cairo\runtime\windows"
 #define RunKey         "Software\Microsoft\Windows\CurrentVersion\Run"
 #define RecorderValue  "simple_taskman recorder"
 #define IfeoKey        "SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\taskmgr.exe"
@@ -68,7 +69,10 @@ Source: "..\EIFGENs\taskman\F_code\simple_taskman_lean.exe";          DestDir: "
 Source: "..\EIFGENs\taskman_recorder\F_code\simple_taskman_lean.exe"; DestDir: "{app}"; DestName: "taskman_recorder.exe"; Flags: ignoreversion
 Source: "..\EIFGENs\taskman_cli\F_code\simple_taskman_lean.exe";      DestDir: "{app}"; DestName: "taskman_cli.exe";      Flags: ignoreversion
 Source: "..\EIFGENs\taskman_stress\F_code\simple_taskman_lean.exe";   DestDir: "{app}"; DestName: "taskman_stress.exe";   Flags: ignoreversion
-Source: "..\..\simple_cairo\cairo.dll";                                DestDir: "{app}"; Flags: ignoreversion
+; cairo 1.18.0 and the six libraries it loads: the fleet's one set, owned by simple_cairo
+; (BUILD_STANDARDS section 9), with their licenses. Never a copy from F_code or elsewhere.
+Source: "{#CairoDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#CairoDir}\licenses\*"; DestDir: "{app}\licenses\cairo"; Flags: ignoreversion
 Source: "README.txt";                                                  DestDir: "{app}"; Flags: ignoreversion isreadme
 
 [Icons]

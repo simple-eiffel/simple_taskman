@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- 2026-11-24: the installer ships the fleet's one cairo set (cairo 1.18.0 and the six DLLs it loads, with their licenses in licenses\cairo) from simple_cairo's runtime\windows, the way simple_bible's does. It shipped a standalone cairo 1.17.2 cairo.dll from simple_cairo\cairo.dll, a path that no longer exists. The installed copy on the development PC was swapped to the set the same day (old file kept as cairo.dll.1.17.2.bak); simple_cairo's suite run against that folder passes 97/0.
+
 ## [0.3.0] - 2026-10-06 (development build, with installer)
 
 ### Added
